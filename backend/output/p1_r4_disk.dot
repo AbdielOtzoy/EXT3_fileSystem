@@ -1,0 +1,41 @@
+digraph G {
+        node [shape=plaintext]
+        tabla [label=<
+            <table border="0" cellborder="1" cellspacing="0">
+                <tr><td colspan="2" bgcolor="blue"><font color="white"><b>REPORTE MBR</b></font></td></tr>
+                <tr><td bgcolor="lightgray"><b>mbr_tamano</b></td><td>13631488</td></tr>
+                <tr><td bgcolor="lightgray"><b>mbr_fecha_creacion</b></td><td>2025-04-02 13:20:32 -0600 CST</td></tr>
+                <tr><td bgcolor="lightgray"><b>mbr_disk_signature</b></td><td>1220375060</td></tr>
+            
+				<tr><td colspan="2" bgcolor="yellow"><b>PARTICIÓN 1</b></td></tr>
+				<tr><td bgcolor="lightblue"><b>part_status</b></td><td>1</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_type</b></td><td>P</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_fit</b></td><td>F</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_start</b></td><td>153</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_size</b></td><td>4194304</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_name</b></td><td>Part31</td></tr>
+			
+				<tr><td colspan="2" bgcolor="yellow"><b>PARTICIÓN 2</b></td></tr>
+				<tr><td bgcolor="lightblue"><b>part_status</b></td><td>1</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_type</b></td><td>P</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_fit</b></td><td>F</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_start</b></td><td>188</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_size</b></td><td>4194304</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_name</b></td><td>Part32</td></tr>
+			
+				<tr><td colspan="2" bgcolor="yellow"><b>PARTICIÓN 3</b></td></tr>
+				<tr><td bgcolor="lightblue"><b>part_status</b></td><td>0</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_type</b></td><td>P</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_fit</b></td><td>F</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_start</b></td><td>223</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_size</b></td><td>1048576</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_name</b></td><td>Part33</td></tr>
+			
+				<tr><td colspan="2" bgcolor="yellow"><b>PARTICIÓN 4</b></td></tr>
+				<tr><td bgcolor="lightblue"><b>part_status</b></td><td>N</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_type</b></td><td>N</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_fit</b></td><td>N</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_start</b></td><td>-1</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_size</b></td><td>-1</td></tr>
+				<tr><td bgcolor="lightblue"><b>part_name</b></td><td>N</td></tr>
+			</table>>] }

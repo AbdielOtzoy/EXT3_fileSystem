@@ -1,0 +1,51 @@
+digraph G {
+		node [shape=plaintext]
+		tabla [label=<
+			<table border="0" cellborder="1" cellspacing="0">
+				<tr><td colspan="5" bgcolor="blue"><font color="white"><b>REPORTE LS</b></font></td></tr>
+				<tr><td bgcolor="lightgray"><b>Nombre</b></td><td bgcolor="lightgray"><b>UID</b></td><td bgcolor="lightgray"><b>GID</b></td><td bgcolor="lightgray"><b>Size</b></td><td bgcolor="lightgray"><b>Tipo</b></td><td bgcolor="lightgray"><b>Fecha</b></td><td bgcolor="lightgray"><b>Hora</b></td><td bgcolor="lightgray"><b>Permisos</b></td></tr>
+	
+				<tr>
+					<td>usac</td>
+					<td>1</td>
+					<td>1</td>
+					<td>0</td>
+					<td>Carpeta</td>
+					<td>2025-04-02</td>
+					<td>13:20:32</td>
+					<td>664</td>
+				</tr>
+			
+				<tr>
+					<td>Tarea.txt</td>
+					<td>1</td>
+					<td>1</td>
+					<td>75</td>
+					<td>Archivo</td>
+					<td>2025-04-02</td>
+					<td>13:20:32</td>
+					<td>664</td>
+				</tr>
+			
+				<tr>
+					<td>Tarea2.txt</td>
+					<td>1</td>
+					<td>1</td>
+					<td>0</td>
+					<td>Archivo</td>
+					<td>2025-04-02</td>
+					<td>13:20:32</td>
+					<td>664</td>
+				</tr>
+			
+				<tr>
+					<td>Tarea3.txt</td>
+					<td>1</td>
+					<td>1</td>
+					<td>10</td>
+					<td>Archivo</td>
+					<td>2025-04-02</td>
+					<td>13:20:32</td>
+					<td>664</td>
+				</tr>
+			</table>>] }

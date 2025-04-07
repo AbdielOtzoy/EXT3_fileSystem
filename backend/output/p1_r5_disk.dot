@@ -1,0 +1,89 @@
+digraph G {
+		rankdir=LR; // Orientación horizontal
+		node [shape=plaintext]
+		disco [label=<
+			<table border="1" cellborder="1" cellspacing="0">
+				<tr><td colspan="4" bgcolor="blue"><font color="white"><b>DISCO</b></font></td></tr>
+				<tr><td bgcolor="lightgray"><b>MBR</b></td><td bgcolor="lightgray"><b>Particiones</b></td><td bgcolor="lightgray"><b>Espacio Libre</b></td></tr>
+	
+				<tr>
+					<td colspan="4" bgcolor="yellow"><b>PARTICIÓN 1 (Extendida)</b></td>
+				</tr>
+				<tr>
+					<td>Extendida</td>
+					<td>5242880 bytes</td>
+					<td>25.00%</td>
+				</tr>
+			
+					<tr>
+						<td colspan="4" bgcolor="orange"><b>EBR INICIAL</b></td>
+					</tr>
+					<tr>
+						<td>EBR</td>
+						<td>1048576 bytes</td>
+						<td>5.00%</td>
+					</tr>
+				
+						<tr>
+							<td colspan="4" bgcolor="orange"><b>EBR SIGUIENTE</b></td>
+						</tr>
+						<tr>
+							<td>EBR</td>
+							<td>1048576 bytes</td>
+							<td>5.00%</td>
+						</tr>
+					
+						<tr>
+							<td colspan="4" bgcolor="orange"><b>EBR SIGUIENTE</b></td>
+						</tr>
+						<tr>
+							<td>EBR</td>
+							<td>1048576 bytes</td>
+							<td>5.00%</td>
+						</tr>
+					
+						<tr>
+							<td colspan="4" bgcolor="orange"><b>EBR SIGUIENTE</b></td>
+						</tr>
+						<tr>
+							<td>EBR</td>
+							<td>1048576 bytes</td>
+							<td>5.00%</td>
+						</tr>
+					
+						<tr>
+							<td colspan="4" bgcolor="orange"><b>EBR SIGUIENTE</b></td>
+						</tr>
+						<tr>
+							<td>EBR</td>
+							<td>1048576 bytes</td>
+							<td>5.00%</td>
+						</tr>
+					
+					<tr>
+						<td colspan="4" bgcolor="lightgreen"><b>ESPACIO LIBRE (Extendida)</b></td>
+					</tr>
+					<tr>
+						<td>Libre</td>
+						<td>0 bytes</td>
+						<td>0.00%</td>
+					</tr>
+				
+				<tr>
+					<td colspan="4" bgcolor="yellow"><b>PARTICIÓN 2 (Primaria)</b></td>
+				</tr>
+				<tr>
+					<td>Primaria</td>
+					<td>5242880 bytes</td>
+					<td>25.00%</td>
+				</tr>
+			
+		<tr>
+			<td colspan="4" bgcolor="lightgreen"><b>ESPACIO LIBRE (Disco)</b></td>
+		</tr>
+		<tr>
+			<td>Libre</td>
+			<td>10485760 bytes</td>
+			<td>50.00%</td>
+		</tr>
+	</table>>]; }

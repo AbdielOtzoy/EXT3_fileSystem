@@ -1,0 +1,52 @@
+digraph G {
+				node [shape=plaintext]
+				tabla [label=<
+					<table border="0" cellborder="1" cellspacing="0">
+						<tr><td colspan="2" bgcolor="blue"><font color="white"><b>REPORTE EBR</b></font></td></tr>
+						<tr><td bgcolor="lightgray"><b>ebr_part_mount</b></td><td>N</td></tr>
+						<tr><td bgcolor="lightgray"><b>ebr_part_fit</b></td><td>B</td></tr>
+						<tr><td bgcolor="lightgray"><b>ebr_part_start</b></td><td>153</td></tr>
+						<tr><td bgcolor="lightgray"><b>ebr_part_size</b></td><td>1048576</td></tr>
+						<tr><td bgcolor="lightgray"><b>ebr_part_next</b></td><td>1048761</td></tr>
+						<tr><td bgcolor="lightgray"><b>ebr_part_name</b></td><td>Part51</td></tr>
+					</table>>] 
+					tabla_1048761 [label=<
+						<table border="0" cellborder="1" cellspacing="0">
+							<tr><td colspan="2" bgcolor="blue"><font color="white"><b>REPORTE EBR</b></font></td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_mount</b></td><td>N</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_fit</b></td><td>B</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_start</b></td><td>1048761</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_size</b></td><td>1048576</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_next</b></td><td>2097369</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_name</b></td><td>Part52</td></tr>
+						</table>>] 
+					tabla_2097369 [label=<
+						<table border="0" cellborder="1" cellspacing="0">
+							<tr><td colspan="2" bgcolor="blue"><font color="white"><b>REPORTE EBR</b></font></td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_mount</b></td><td>N</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_fit</b></td><td>B</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_start</b></td><td>2097369</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_size</b></td><td>1048576</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_next</b></td><td>3145977</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_name</b></td><td>Part54</td></tr>
+						</table>>] 
+					tabla_3145977 [label=<
+						<table border="0" cellborder="1" cellspacing="0">
+							<tr><td colspan="2" bgcolor="blue"><font color="white"><b>REPORTE EBR</b></font></td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_mount</b></td><td>N</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_fit</b></td><td>B</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_start</b></td><td>3145977</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_size</b></td><td>1048576</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_next</b></td><td>4194585</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_name</b></td><td>Part55</td></tr>
+						</table>>] 
+					tabla_4194585 [label=<
+						<table border="0" cellborder="1" cellspacing="0">
+							<tr><td colspan="2" bgcolor="blue"><font color="white"><b>REPORTE EBR</b></font></td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_mount</b></td><td>N</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_fit</b></td><td>B</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_start</b></td><td>4194585</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_size</b></td><td>1048576</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_next</b></td><td>-1</td></tr>
+							<tr><td bgcolor="lightgray"><b>ebr_part_name</b></td><td>Part56</td></tr>
+						</table>>] }
