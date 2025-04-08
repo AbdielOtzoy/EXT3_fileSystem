@@ -5,6 +5,8 @@ import Terminal from "../components/Terminal";
 import api from "@/lib/api";
 import FileUpload from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { toast } from "@/hooks/use-toast";
 
 export default function FileSystemSimulator() {
   const [inputContent, setInputContent] = useState<string[]>([""]);
@@ -63,6 +65,19 @@ export default function FileSystemSimulator() {
     handleExecute(content);
   };
 
+  const handleLogout = async () => {
+    const command = "logout";
+    const response = await api.post("/execute", {
+      command: command
+    });
+    console.log('Response:', response);
+    toast({
+      title: 'Logout',
+      description: response.data.output,
+      variant: 'default'
+    })
+  };
+
   return (
     <div className="min-h-screen p-8"
       style={{ fontFamily: "'Fira Code', monospace", backgroundColor: "#202020" }}
@@ -99,9 +114,16 @@ export default function FileSystemSimulator() {
           </svg>
           Cargar Archivo
         </label>
-        <Button variant="outline" className="ml-4" onClick={() => handleExecute(inputContent[inputContent.length - 1])}>
+        <Button variant="outline" className="ml-4 bg-green-500 text-white hover:bg-green-600" onClick={() => handleExecute(inputContent[inputContent.length - 1])}>
           Ejecutar
         </Button>
+        <Link href="/file-explorer">
+          <Button variant="outline" className="ml-4 bg-blue-500 text-white hover:bg-blue-600">File Explorer</Button>
+        </Link>
+        <Link href="/login">
+          <Button variant="outline" className="ml-4">Login</Button>
+        </Link>
+        <Button variant="outline" className="ml-4 bg-red-500 text-white hover:bg-red-600" onClick={handleLogout}>Logout</Button>
       </div>
 
       <div className="flex justify-center space-x-4">

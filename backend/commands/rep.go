@@ -10,20 +10,20 @@ import (
 )
 
 type REP struct {
-	id 				string
-	path 			string
-	name 			string
-	path_file_ls 	string
-} 
+	id           string
+	path         string
+	name         string
+	path_file_ls string
+}
 
 func ParseRep(tokens []string) (string, error) {
 	cmd := &REP{}
-	
+
 	args := strings.Join(tokens, " ")
 
 	re := regexp.MustCompile(`(?i)-id=[^\s]+|-path="[^"]+"|-path=[^\s]+|-name=[^\s]+|-path_file_ls="[^"]+"|-path_file_ls=[^\s]+`)
 
-	matches := re.FindAllString(args, -1)	
+	matches := re.FindAllString(args, -1)
 
 	for _, match := range matches {
 		kv := strings.SplitN(match, "=", 2)
@@ -37,26 +37,26 @@ func ParseRep(tokens []string) (string, error) {
 		}
 
 		switch key {
-			case "-id":
-				if value == "" {
-					return "", errors.New("invalid id")
-				}
-				cmd.id = value
-			case "-path":
-				if value == "" {
-					return "", errors.New("invalid path")
-				}
-				cmd.path = value
-			case "-name":
-				validNames := []string{"mbr", "disk", "inode", "block", "bm_inode", "bm_block", "sb", "file", "ls", "tree"}
-				if !contains(validNames, value) {
-					return "", errors.New("nombre inválido, debe ser uno de los siguientes: mbr, disk, inode, block, bm_inode, bm_block, sb, file, ls")
-				}
-				cmd.name = value
-			case "-path_file_ls":
-				cmd.path_file_ls = value
-			default:
-				return "", fmt.Errorf("invalid argument: %s", key)
+		case "-id":
+			if value == "" {
+				return "", errors.New("invalid id")
+			}
+			cmd.id = value
+		case "-path":
+			if value == "" {
+				return "", errors.New("invalid path")
+			}
+			cmd.path = value
+		case "-name":
+			validNames := []string{"mbr", "disk", "inode", "block", "bm_inode", "bm_block", "sb", "file", "ls", "tree"}
+			if !contains(validNames, value) {
+				return "", errors.New("nombre inválido, debe ser uno de los siguientes: mbr, disk, inode, block, bm_inode, bm_block, sb, file, ls")
+			}
+			cmd.name = value
+		case "-path_file_ls":
+			cmd.path_file_ls = value
+		default:
+			return "", fmt.Errorf("invalid argument: %s", key)
 		}
 	}
 	if cmd.id == "" || cmd.path == "" || cmd.name == "" {
@@ -89,7 +89,7 @@ func commandRep(rep *REP) (string, error) {
 
 	switch rep.name {
 	case "mbr":
-		err = reports.ReportMBR(mountedMbr,mountedDiskPath, rep.path)
+		err = reports.ReportMBR(mountedMbr, mountedDiskPath, rep.path)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}
@@ -119,7 +119,7 @@ func commandRep(rep *REP) (string, error) {
 		}
 		return fmt.Sprintf("BM Block report generated at %s", rep.path), nil
 	case "file":
-		err = reports.ReportFile(mountedSb, mountedDiskPath,rep.path, rep.path_file_ls)
+		err = reports.ReportFile(mountedSb, mountedDiskPath, rep.path, rep.path_file_ls)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 		}

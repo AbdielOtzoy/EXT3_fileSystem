@@ -8,7 +8,7 @@ import (
 )
 
 func Analyzer(input string) (string, error) {
-	
+
 	tokens := strings.Fields(input)
 
 	if len(tokens) == 0 {
@@ -52,6 +52,8 @@ func Analyzer(input string) (string, error) {
 		return commands.ParseMkuser(tokens[1:])
 	case "rmusr":
 		return commands.ParseRmuser(tokens[1:])
+	case "getfs":
+		return commands.ParseGetfs(tokens[1:])
 	default:
 		return "", fmt.Errorf("comando desconocido: %s", tokens[0])
 	}
