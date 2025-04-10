@@ -2,13 +2,13 @@ package structures
 
 import (
 	utils "backend/utils"
+	"fmt"
 	"strings"
 	"time"
-	"fmt"
 )
 
-// createFolderInInode crea una carpeta en un inodo específico
-func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parentsDir []string, destDir string, uid int32, gid int32) error {
+// createFolderInInodeExt2 crea una carpeta en un inodo específico
+func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, parentsDir []string, destDir string, uid int32, gid int32) error {
 	// Crear un nuevo inodo
 	inode := &Inode{}
 	// Deserializar el inodo
@@ -32,127 +32,29 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 		}
 		if blockIndex == -1 {
 			if blockIndex == -1 {
-			fmt.Println("Ya no hay más bloques, creando uno nuevo")
-			fmt.Println("i:", i)
+				fmt.Println("Ya no hay más bloques, creando uno nuevo")
+				fmt.Println("i:", i)
 
-			// 1. Crear y serializar el nuevo bloque de carpeta
-			newBlock := &FolderBlock{
-				B_content: [4]FolderContent{
-					{B_name: [12]byte{'.'}, B_inodo: inodeIndex},
-					{B_name: [12]byte{'.', '.'}, B_inodo: inodeIndex},
-					{B_name: [12]byte{'-'}, B_inodo: -1},
-					{B_name: [12]byte{'-'}, B_inodo: -1},
-				},
-			}
-
-			// Actualizar contenido del bloque
-			destDirByte := [12]byte{}
-			copy(destDirByte[:], destDir)
-			newBlock.B_content[2] = FolderContent{B_name: destDirByte, B_inodo: sb.S_inodes_count}
-
-			// Guardar posición del nuevo bloque
-			newBlockPos := sb.S_blocks_count
-
-			// Serializar el nuevo bloque
-			err = newBlock.Serialize(path, int64(sb.S_block_start+(newBlockPos*sb.S_block_size)))
-			if err != nil {
-				return err
-			}
-
-			// Actualizar bitmap de bloques
-			err = sb.UpdateBitmapBlock(path)
-			if err != nil {
-				return err
-			}
-
-			// Actualizar superbloque (nuevo bloque)
-			sb.S_blocks_count++
-			sb.S_free_blocks_count--
-			sb.S_first_blo += sb.S_block_size
-
-			// 2. Crear el inodo de la nueva carpeta
-			folderInode := &Inode{
-				I_uid:   uid,
-				I_gid:   gid,
-				I_size:  0,
-				I_atime: float32(time.Now().Unix()),
-				I_ctime: float32(time.Now().Unix()),
-				I_mtime: float32(time.Now().Unix()),
-				I_block: [15]int32{sb.S_blocks_count, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-				I_type:  [1]byte{'0'},
-				I_perm:  [3]byte{'6', '6', '4'},
-			}
-
-			// Serializar el nuevo inodo
-			err = folderInode.Serialize(path, int64(sb.S_first_ino))
-			if err != nil {
-				return err
-			}
-
-			// Actualizar bitmap de inodos
-			err = sb.UpdateBitmapInode(path)
-			if err != nil {
-				return err
-			}
-
-			// Actualizar superbloque (nuevo inodo)
-			sb.S_inodes_count++
-			sb.S_free_inodes_count--
-			sb.S_first_ino += sb.S_inode_size
-
-			// 3. Crear bloque para el nuevo inodo
-			folderBlock := &FolderBlock{
-				B_content: [4]FolderContent{
-					{B_name: [12]byte{'.'}, B_inodo: sb.S_inodes_count-1}, // Apunta a sí mismo
-					{B_name: [12]byte{'.', '.'}, B_inodo: inodeIndex},     // Apunta al padre
-					{B_name: [12]byte{'-'}, B_inodo: -1},
-					{B_name: [12]byte{'-'}, B_inodo: -1},
-				},
-			}
-
-			// Serializar el bloque de la nueva carpeta
-			err = folderBlock.Serialize(path, int64(sb.S_block_start+(sb.S_blocks_count*sb.S_block_size)))
-			if err != nil {
-				return err
-			}
-
-			// Actualizar bitmap de bloques
-			err = sb.UpdateBitmapBlock(path)
-			if err != nil {
-				return err
-			}
-			sb.S_blocks_count++
-			sb.S_free_blocks_count--
-			sb.S_first_blo += sb.S_block_size
-
-			// 4. Manejar apuntadores indirectos si es necesario
-			if i >= 12 { // Bloques indirectos
-				var pointerBlock *PointerBlock
-				pointerPos := sb.S_blocks_count
-
-				switch i {
-				case 12: // Indirecto simple
-					fmt.Println("Creando bloque de apuntadores indirecto simple")
-					pointerBlock = &PointerBlock{
-						P_pointers: [16]int32{
-							newBlockPos, // Primer bloque que creamos
-							-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-						},
-					}
-					
-				case 13: // Indirecto doble
-					fmt.Println("Creando bloque de apuntadores indirecto doble")
-					// Implementar lógica similar para doble indirecto
-					return fmt.Errorf("apuntadores indirectos dobles no implementados aún")
-					
-				case 14: // Indirecto triple
-					fmt.Println("Creando bloque de apuntadores indirecto triple")
-					// Implementar lógica similar para triple indirecto
-					return fmt.Errorf("apuntadores indirectos triples no implementados aún")
+				// 1. Crear y serializar el nuevo bloque de carpeta
+				newBlock := &FolderBlock{
+					B_content: [4]FolderContent{
+						{B_name: [12]byte{'.'}, B_inodo: inodeIndex},
+						{B_name: [12]byte{'.', '.'}, B_inodo: inodeIndex},
+						{B_name: [12]byte{'-'}, B_inodo: -1},
+						{B_name: [12]byte{'-'}, B_inodo: -1},
+					},
 				}
 
-				// Serializar el bloque de apuntadores
-				err = pointerBlock.Serialize(path, int64(sb.S_block_start+(pointerPos*sb.S_block_size)))
+				// Actualizar contenido del bloque
+				destDirByte := [12]byte{}
+				copy(destDirByte[:], destDir)
+				newBlock.B_content[2] = FolderContent{B_name: destDirByte, B_inodo: sb.S_inodes_count}
+
+				// Guardar posición del nuevo bloque
+				newBlockPos := sb.S_blocks_count
+
+				// Serializar el nuevo bloque
+				err = newBlock.Serialize(path, int64(sb.S_block_start+(newBlockPos*sb.S_block_size)))
 				if err != nil {
 					return err
 				}
@@ -163,26 +65,124 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 					return err
 				}
 
-				// Actualizar superbloque (bloque de apuntadores)
+				// Actualizar superbloque (nuevo bloque)
 				sb.S_blocks_count++
 				sb.S_free_blocks_count--
 				sb.S_first_blo += sb.S_block_size
 
-				// Actualizar inodo con referencia al bloque de apuntadores
-				inode.I_block[i] = pointerPos
-			} else {
-				// Para bloques directos, simplemente actualizar la referencia
-				inode.I_block[i] = newBlockPos
-			}
+				// 2. Crear el inodo de la nueva carpeta
+				folderInode := &Inode{
+					I_uid:   uid,
+					I_gid:   gid,
+					I_size:  0,
+					I_atime: float32(time.Now().Unix()),
+					I_ctime: float32(time.Now().Unix()),
+					I_mtime: float32(time.Now().Unix()),
+					I_block: [15]int32{sb.S_blocks_count, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+					I_type:  [1]byte{'0'},
+					I_perm:  [3]byte{'6', '6', '4'},
+				}
 
-			// Serializar el inodo actualizado
-			err = inode.Serialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
-			if err != nil {
-				return err
-			}
+				// Serializar el nuevo inodo
+				err = folderInode.Serialize(path, int64(sb.S_first_ino))
+				if err != nil {
+					return err
+				}
 
-			return nil
-	}
+				// Actualizar bitmap de inodos
+				err = sb.UpdateBitmapInode(path)
+				if err != nil {
+					return err
+				}
+
+				// Actualizar superbloque (nuevo inodo)
+				sb.S_inodes_count++
+				sb.S_free_inodes_count--
+				sb.S_first_ino += sb.S_inode_size
+
+				// 3. Crear bloque para el nuevo inodo
+				folderBlock := &FolderBlock{
+					B_content: [4]FolderContent{
+						{B_name: [12]byte{'.'}, B_inodo: sb.S_inodes_count - 1}, // Apunta a sí mismo
+						{B_name: [12]byte{'.', '.'}, B_inodo: inodeIndex},       // Apunta al padre
+						{B_name: [12]byte{'-'}, B_inodo: -1},
+						{B_name: [12]byte{'-'}, B_inodo: -1},
+					},
+				}
+
+				// Serializar el bloque de la nueva carpeta
+				err = folderBlock.Serialize(path, int64(sb.S_block_start+(sb.S_blocks_count*sb.S_block_size)))
+				if err != nil {
+					return err
+				}
+
+				// Actualizar bitmap de bloques
+				err = sb.UpdateBitmapBlock(path)
+				if err != nil {
+					return err
+				}
+				sb.S_blocks_count++
+				sb.S_free_blocks_count--
+				sb.S_first_blo += sb.S_block_size
+
+				// 4. Manejar apuntadores indirectos si es necesario
+				if i >= 12 { // Bloques indirectos
+					var pointerBlock *PointerBlock
+					pointerPos := sb.S_blocks_count
+
+					switch i {
+					case 12: // Indirecto simple
+						fmt.Println("Creando bloque de apuntadores indirecto simple")
+						pointerBlock = &PointerBlock{
+							P_pointers: [16]int32{
+								newBlockPos, // Primer bloque que creamos
+								-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+							},
+						}
+
+					case 13: // Indirecto doble
+						fmt.Println("Creando bloque de apuntadores indirecto doble")
+						// Implementar lógica similar para doble indirecto
+						return fmt.Errorf("apuntadores indirectos dobles no implementados aún")
+
+					case 14: // Indirecto triple
+						fmt.Println("Creando bloque de apuntadores indirecto triple")
+						// Implementar lógica similar para triple indirecto
+						return fmt.Errorf("apuntadores indirectos triples no implementados aún")
+					}
+
+					// Serializar el bloque de apuntadores
+					err = pointerBlock.Serialize(path, int64(sb.S_block_start+(pointerPos*sb.S_block_size)))
+					if err != nil {
+						return err
+					}
+
+					// Actualizar bitmap de bloques
+					err = sb.UpdateBitmapBlock(path)
+					if err != nil {
+						return err
+					}
+
+					// Actualizar superbloque (bloque de apuntadores)
+					sb.S_blocks_count++
+					sb.S_free_blocks_count--
+					sb.S_first_blo += sb.S_block_size
+
+					// Actualizar inodo con referencia al bloque de apuntadores
+					inode.I_block[i] = pointerPos
+				} else {
+					// Para bloques directos, simplemente actualizar la referencia
+					inode.I_block[i] = newBlockPos
+				}
+
+				// Serializar el inodo actualizado
+				err = inode.Serialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
 		}
 
 		// Crear un nuevo bloque de carpeta
@@ -224,7 +224,7 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 				if strings.EqualFold(contentName, parentDirName) {
 					//fmt.Println("---------LA ENCONTRÉ-------")
 					// Si son las mismas, entonces entramos al inodo que apunta el bloque
-					err := sb.createFolderInInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, uid, gid)
+					err := sb.createFolderInInodeExt2(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, uid, gid)
 					if err != nil {
 						return err
 					}
@@ -234,12 +234,12 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 				fmt.Println("---------ESTOY  CREANDO--------")
 				fmt.Println("blockIndex: ", blockIndex)
 				fmt.Println("indexContent: ", indexContent)
-				fmt.Println("content: ", content.B_inodo )
+				fmt.Println("content: ", content.B_inodo)
 				fmt.Println(content.B_inodo != -1 && indexContent == 3)
 				fmt.Println("i:", i)
 
 				// Si el apuntador al inodo está ocupado, continuar con el siguiente
-				if content.B_inodo != -1  {
+				if content.B_inodo != -1 {
 					fmt.Println("Ya no hay espacio en el bloque")
 					continue
 				}
@@ -293,7 +293,7 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 										I_block: [15]int32{sb.S_blocks_count, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 										I_type:  [1]byte{'0'},
 										I_perm:  [3]byte{'6', '6', '4'},
-									}	
+									}
 
 									// Serializar el inodo de la carpeta
 									err = folderInode.Serialize(path, int64(sb.S_first_ino))
@@ -406,8 +406,8 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 							// 3. Crear bloque para el nuevo inodo
 							folderBlock := &FolderBlock{
 								B_content: [4]FolderContent{
-									{B_name: [12]byte{'.'}, B_inodo: sb.S_inodes_count-1}, // Apunta a sí mismo
-									{B_name: [12]byte{'.', '.'}, B_inodo: inodeIndex},     // Apunta al padre
+									{B_name: [12]byte{'.'}, B_inodo: sb.S_inodes_count - 1}, // Apunta a sí mismo
+									{B_name: [12]byte{'.', '.'}, B_inodo: inodeIndex},       // Apunta al padre
 									{B_name: [12]byte{'-'}, B_inodo: -1},
 									{B_name: [12]byte{'-'}, B_inodo: -1},
 								},
@@ -519,4 +519,3 @@ func (sb *SuperBlock) createFolderInInode(path string, inodeIndex int32, parents
 	}
 	return nil
 }
-

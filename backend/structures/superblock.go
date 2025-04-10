@@ -95,7 +95,6 @@ func (sb *SuperBlock) Deserialize(path string, offset int64) error {
 	return nil
 }
 
-
 // PrintSuperBlock displays the values of the SuperBlock structure in a human-readable format.
 // This function is used for debugging and visualization purposes.
 func (sb *SuperBlock) Print() {
@@ -195,14 +194,14 @@ func (sb *SuperBlock) PrintBlocks(path string) error {
 
 // CreateFolder crea una carpeta en el sistema de archivos
 func (sb *SuperBlock) CreateFolder(path string, parentsDir []string, destDir string, uid int32, gid int32) error {
-	return sb.createFolderInInode(path, 0, parentsDir, destDir, uid, gid)
+	return sb.createFolderInInodeExt2(path, 0, parentsDir, destDir, uid, gid)
 
 }
 
 // CreateFile crea un archivo en el sistema de archivos
 func (sb *SuperBlock) CreateFile(path string, parentsDir []string, destDir string, r bool, size int, content string, uid int32, gid int32) error {
 	fmt.Println("Creando archivo:", path, "contenido:", content)
-	return sb.createFileInode(path, 0, parentsDir, destDir, r, size, content, uid, gid)
+	return sb.createFileInodeExt2(path, 0, parentsDir, destDir, r, size, content, uid, gid)
 }
 
 func (sb *SuperBlock) ExistsFolcer(path string, parentsDir []string, destDir string) (bool, error) {
@@ -225,7 +224,7 @@ func (sb *SuperBlock) ReadFile(path string, parentsDir []string, destDir string)
 	return content, nil
 }
 
-func (sb* SuperBlock) GetInode(path string, parentsDir []string, destDir string)  (int32, error){
+func (sb *SuperBlock) GetInode(path string, parentsDir []string, destDir string) (int32, error) {
 	inode, err := sb.getInodeFromPath(path, 0, parentsDir, destDir)
 	if err != nil {
 		return -1, err
@@ -234,7 +233,7 @@ func (sb* SuperBlock) GetInode(path string, parentsDir []string, destDir string)
 	return inode, nil
 }
 
-func (sb *SuperBlock) LoginUser(user string, password string, path string) (int32, int32,error) {
+func (sb *SuperBlock) LoginUser(user string, password string, path string) (int32, int32, error) {
 	uid, gid, err := sb.loginUserInInode(user, password, path)
 	if err != nil {
 		return -1, -1, err
@@ -249,7 +248,7 @@ func (sb *SuperBlock) CreateGroup(name string, path string) error {
 		return err
 	}
 
-	return nil	
+	return nil
 }
 
 func (sb *SuperBlock) RemoveGroup(name string, path string) error {

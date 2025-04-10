@@ -2,13 +2,13 @@ package structures
 
 import (
 	utils "backend/utils"
+	"fmt"
 	"strings"
 	"time"
-	"fmt"
 )
 
 // Crear users.txt en nuestro sistema de archivos
-func (sb *SuperBlock) CreateUsersFile(path string) error {
+func (sb *SuperBlock) CreateUsersFileExt2(path string) error {
 	// ----------- Creamos / -----------
 	// Creamos el inodo raíz
 	rootInode := &Inode{
@@ -157,8 +157,7 @@ func (sb *SuperBlock) CreateUsersFile(path string) error {
 	return nil
 }
 
-
-func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir []string, destDir string, r bool, size int, contentFile string, uid int32, gid int32) error {
+func (sb *SuperBlock) createFileInodeExt2(path string, inodeIndex int32, parentsDir []string, destDir string, r bool, size int, contentFile string, uid int32, gid int32) error {
 	// crear un nuevo inodo
 	inode := &Inode{}
 	// deserializar el inodo
@@ -231,7 +230,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 			} else {
 				// llenar el contenido con una cadena de numeros del 0 al 9 cuantas veces sea el tamaño
 				for i := 0; i < size; i++ {
-					content += string(i % 10 + '0')
+					content += string(i%10 + '0')
 				}
 			}
 			fmt.Println("Contenido del archivo: ", content)
@@ -254,7 +253,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 				}
 				// copiar el contenido del bloque
 				copy(fileBlock.B_content[:], contentBlocks[i])
-				
+
 				folderInode.I_block[i] = sb.S_blocks_count
 
 				// serializar el bloque
@@ -274,32 +273,31 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 				sb.S_free_blocks_count--
 				sb.S_first_blo += sb.S_block_size
 
-
 			}
 			if len(contentBlocks) == 0 {
-					// crear un bloque de archivo vacío
-					fileBlock := &FileBlock{
-						B_content: [64]byte{},
-					}
-
-					folderInode.I_block[0] = sb.S_blocks_count
-					// serializar el bloque
-					err = fileBlock.Serialize(path, int64(sb.S_block_start+(sb.S_blocks_count*sb.S_block_size)))
-					if err != nil {
-						return err
-					}
-
-					// Actualizar el bitmap de bloques
-					err = sb.UpdateBitmapBlock(path)
-					if err != nil {
-						return err
-					}
-
-					// Actualizar el superbloque
-					sb.S_blocks_count++
-					sb.S_free_blocks_count--
-					sb.S_first_blo += sb.S_block_size
+				// crear un bloque de archivo vacío
+				fileBlock := &FileBlock{
+					B_content: [64]byte{},
 				}
+
+				folderInode.I_block[0] = sb.S_blocks_count
+				// serializar el bloque
+				err = fileBlock.Serialize(path, int64(sb.S_block_start+(sb.S_blocks_count*sb.S_block_size)))
+				if err != nil {
+					return err
+				}
+
+				// Actualizar el bitmap de bloques
+				err = sb.UpdateBitmapBlock(path)
+				if err != nil {
+					return err
+				}
+
+				// Actualizar el superbloque
+				sb.S_blocks_count++
+				sb.S_free_blocks_count--
+				sb.S_first_blo += sb.S_block_size
+			}
 			// Serializar el inodo del archivo
 			err = folderInode.Serialize(path, int64(sb.S_first_ino))
 			if err != nil {
@@ -308,7 +306,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 
 			// Actualizar el bitmap de inodos
 			err = sb.UpdateBitmapInode(path)
-			if err != nil {	
+			if err != nil {
 				return err
 			}
 
@@ -319,7 +317,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 			fmt.Println("contenido del archivo para añadir al bloque: ", contentFile)
 
 			inode.I_block[i] = newBlockPos
-		
+
 			// Serializar el inodo actualizado
 			err = inode.Serialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
 			if err != nil {
@@ -359,7 +357,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 				parentDirName := strings.Trim(parentDir, "\x00 ")
 				// Si el nombre del contenido coincide con el nombre de la carpeta padre
 				if strings.EqualFold(contentName, parentDirName) {
-					err := sb.createFileInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, r, size, contentFile, uid, gid)
+					err := sb.createFileInodeExt2(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, r, size, contentFile, uid, gid)
 					if err != nil {
 						return err
 					}
@@ -403,7 +401,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 				} else {
 					// llenar el contenido con una cadena de numeros del 0 al 9 cuantas veces sea el tamaño
 					for i := 0; i < size; i++ {
-						content += string(i % 10 + '0')
+						content += string(i%10 + '0')
 					}
 				}
 				fmt.Println("Contenido del archivo: ", content)
@@ -427,7 +425,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 					}
 					// copiar el contenido del bloque
 					copy(fileBlock.B_content[:], contentBlocks[i])
-					
+
 					fileInode.I_block[i] = sb.S_blocks_count
 
 					// serializar el bloque
@@ -446,7 +444,6 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 					sb.S_blocks_count++
 					sb.S_free_blocks_count--
 					sb.S_first_blo += sb.S_block_size
-
 
 				}
 				if len(contentBlocks) == 0 {
@@ -481,7 +478,7 @@ func (sb *SuperBlock) createFileInode(path string, inodeIndex int32, parentsDir 
 
 				// Actualizar el bitmap de inodos
 				err = sb.UpdateBitmapInode(path)
-				if err != nil {	
+				if err != nil {
 					return err
 				}
 
@@ -520,7 +517,7 @@ func (sb *SuperBlock) folderExists(path string, inodeIndex int32, parentsDir []s
 
 		// Crear un nuevo bloque de carpeta
 		block := &FolderBlock{}
-		
+
 		// Deserializar el bloque
 		err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size))) // 64 porque es el tamaño de un bloque
 		if err != nil {
@@ -558,7 +555,7 @@ func (sb *SuperBlock) folderExists(path string, inodeIndex int32, parentsDir []s
 					return fileContent, nil
 				}
 			} else {
-				
+
 				if content.B_inodo == -1 {
 					continue
 				}
@@ -568,7 +565,7 @@ func (sb *SuperBlock) folderExists(path string, inodeIndex int32, parentsDir []s
 				// convertir content.B_name a string
 				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
 				fmt.Println("Nombre de la carpeta: ", contentName)
-				if(contentName == destDir) {
+				if contentName == destDir {
 					fmt.Println("---------LA ENCONTRÉ-------")
 					return true, nil
 				}
@@ -578,7 +575,6 @@ func (sb *SuperBlock) folderExists(path string, inodeIndex int32, parentsDir []s
 	}
 	return false, nil
 }
-
 
 func (sb *SuperBlock) readFileInInode(path string, inodeIndex int32, parentsDir []string, destDir string) (string, error) {
 	// Crear un nuevo inodo
@@ -598,7 +594,6 @@ func (sb *SuperBlock) readFileInInode(path string, inodeIndex int32, parentsDir 
 
 	fmt.Println("Inodo: ", inodeIndex)
 
-
 	// Iterar sobre cada bloque del inodo (apuntadores)
 	for _, blockIndex := range inode.I_block {
 		// Si el bloque no existe, salir
@@ -615,10 +610,9 @@ func (sb *SuperBlock) readFileInInode(path string, inodeIndex int32, parentsDir 
 			return "", err
 		}
 
-
 		fmt.Println("Bloque: ", blockIndex)
 		block.Print()
-		
+
 		// Iterar sobre cada contenido del bloque, desde el index 2 porque los primeros dos son . y ..
 		for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
 			// Obtener el contenido del bloque
@@ -640,7 +634,7 @@ func (sb *SuperBlock) readFileInInode(path string, inodeIndex int32, parentsDir 
 				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
 				// Convertir parentDir a string y eliminar los caracteres nulos
 				parentDirName := strings.Trim(parentDir, "\x00 ")
-				
+
 				fmt.Println("Nombre del contenido: ", contentName)
 				fmt.Println("Nombre del archivo: ", destDir)
 				fmt.Println("Nombre de la carpeta padre: ", parentDirName)
@@ -666,7 +660,7 @@ func (sb *SuperBlock) readFileInInode(path string, inodeIndex int32, parentsDir 
 				destDirByte := [12]byte{}
 				copy(destDirByte[:], destDir)
 
-				if(content.B_name == destDirByte) {
+				if content.B_name == destDirByte {
 					fmt.Println("---------LA ENCONTRÉ-------")
 					// Si son las mismas, entonces entramos al inodo que apunta el bloque
 					inodeFile := &Inode{}
@@ -697,70 +691,70 @@ func (sb *SuperBlock) readFileInInode(path string, inodeIndex int32, parentsDir 
 						}
 
 						return allContent, nil
-						
-					} 
+
+					}
 					return "", fmt.Errorf("el inodo no es de tipo archivo")
 				}
 			}
 		}
 	}
 	return "", fmt.Errorf("no se encontró el archivo")
-}   
+}
 
 // getInodeFromPath busca y devuelve el inodo correspondiente a una ruta específica
 func (sb *SuperBlock) getInodeFromPath(path string, inodeIndex int32, parentsDir []string, targetName string) (int32, error) {
-    // Deserializar el inodo actual
-    inode := &Inode{}
-    err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
-    if err != nil {
-        return -1, err
-    }
+	// Deserializar el inodo actual
+	inode := &Inode{}
+	err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+	if err != nil {
+		return -1, err
+	}
 
-    // Si es un archivo y no hay más padres, verificar si es el target
-    if inode.I_type[0] == '1' && len(parentsDir) == 0 {
-        return inodeIndex, nil
-    }
+	// Si es un archivo y no hay más padres, verificar si es el target
+	if inode.I_type[0] == '1' && len(parentsDir) == 0 {
+		return inodeIndex, nil
+	}
 
-    // Iterar sobre cada bloque del inodo
-    for _, blockIndex := range inode.I_block {
-        if blockIndex == -1 {
-            continue
-        }
+	// Iterar sobre cada bloque del inodo
+	for _, blockIndex := range inode.I_block {
+		if blockIndex == -1 {
+			continue
+		}
 
-        // Si es un directorio, buscar en los bloques de carpeta
-        if inode.I_type[0] == '0' {
-            block := &FolderBlock{}
-            err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size)))
-            if err != nil {
-                return -1, err
-            }
+		// Si es un directorio, buscar en los bloques de carpeta
+		if inode.I_type[0] == '0' {
+			block := &FolderBlock{}
+			err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size)))
+			if err != nil {
+				return -1, err
+			}
 
-            // Buscar en los contenidos del bloque (empezando desde 2 para saltar . y ..)
-            for _, content := range block.B_content[2:] {
-                if content.B_inodo == -1 {
-                    continue
-                }
+			// Buscar en los contenidos del bloque (empezando desde 2 para saltar . y ..)
+			for _, content := range block.B_content[2:] {
+				if content.B_inodo == -1 {
+					continue
+				}
 
-                contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
-                if len(parentsDir) > 0 {
-                    // Si hay padres por recorrer, buscar el siguiente nivel
-                    parentDir := strings.Trim(parentsDir[0], "\x00 ")
-                    if strings.EqualFold(contentName, parentDir) {
-                        // Llamada recursiva con el siguiente nivel
-                        return sb.getInodeFromPath(path, content.B_inodo, parentsDir[1:], targetName)
-                    }
-                } else {
-                    // Si no hay más padres, verificar si es el target
-                    target := strings.Trim(targetName, "\x00 ")
-                    if strings.EqualFold(contentName, target) {
-                        return content.B_inodo, nil
-                    }
-                }
-            }
-        }
-    }
+				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+				if len(parentsDir) > 0 {
+					// Si hay padres por recorrer, buscar el siguiente nivel
+					parentDir := strings.Trim(parentsDir[0], "\x00 ")
+					if strings.EqualFold(contentName, parentDir) {
+						// Llamada recursiva con el siguiente nivel
+						return sb.getInodeFromPath(path, content.B_inodo, parentsDir[1:], targetName)
+					}
+				} else {
+					// Si no hay más padres, verificar si es el target
+					target := strings.Trim(targetName, "\x00 ")
+					if strings.EqualFold(contentName, target) {
+						return content.B_inodo, nil
+					}
+				}
+			}
+		}
+	}
 
-    return -1, fmt.Errorf("no se encontró el inodo para '%s'", targetName)
+	return -1, fmt.Errorf("no se encontró el inodo para '%s'", targetName)
 }
 
 func (sb *SuperBlock) loginUserInInode(user string, password string, path string) (int32, int32, error) {
@@ -812,7 +806,7 @@ func (sb *SuperBlock) loginUserInInode(user string, password string, path string
 		*/
 
 		fmt.Println("Partes: ", parts)
-		
+
 		// verificar si es un usuario
 		if parts[1] == "U" {
 			fmt.Println("Usuario: ", parts[3])
@@ -845,80 +839,81 @@ func (sb *SuperBlock) loginUserInInode(user string, password string, path string
 		}
 	}
 
-	return 0, 0, fmt.Errorf("usuario o contraseña incorrectos")  
+	return 0, 0, fmt.Errorf("usuario o contraseña incorrectos")
 
 }
 
 func (sb *SuperBlock) createGroupInInode(name string, path string) error {
-    useBlock := &FileBlock{}
+	useBlock := &FileBlock{}
 
-    // Deserializar el bloque
-    err := useBlock.Deserialize(path, int64(sb.S_block_start+(1*sb.S_block_size)))
-    if err != nil {
-        return err
-    }
-
-	useContent := sb.getUsersContent(path)
-
-    fmt.Println("Tamaño del bloque: ", len(useContent))
-
-    // Encontrar dónde termina realmente el contenido (primer byte nulo o fin del array)
-    var contentEndPos int
-    for i, b := range useContent {
-        if b == 0 {
-            contentEndPos = i
-            break
-        }
-    }
-    // Si no hay bytes nulos, usar todo el array
-    if contentEndPos == 0 {
-        contentEndPos = len(useContent)
-    }
-
-    // Obtener solo el contenido real (sin bytes nulos)
-    content := string(useContent[:contentEndPos])
-    
-    fmt.Println("Tamaño del contenido real: ", len(content))
-    fmt.Println("Contenido Grup: ", content)
-
-    // Separar el contenido por líneas
-    lines := strings.Split(content, "\n")
-
-    // Eliminar el último elemento si está vacío
-    if len(lines) > 0 && lines[len(lines)-1] == "" {
-        lines = lines[:len(lines)-1]
-    }
-
-    countGrupos := 0
-    for _, line := range lines {
-        parts := strings.Split(line, ",")
-        
-        fmt.Println("Partes: ", parts)
-        
-        if len(parts) > 1 && parts[1] == "G" {
-            fmt.Println("Grupo: ", parts[2])
-			countGrupos++
-            if parts[2] == name {
-                fmt.Println("Grupo ya existe")
-                return fmt.Errorf("grupo ya existe")
-            }
-        }
-    }
-
-    // Si el grupo no existe, agregarlo
-    newGrupo := fmt.Sprintf("%d,G,%s\n", countGrupos+1, name)
-    newContent := content + newGrupo
-    fmt.Println("Nuevo grupo: ", newGrupo)
-    fmt.Println("Contenido nuevo: ", newContent)
-    fmt.Println("Tamaño del nuevo contenido: ", len(newContent))
-
-    err = sb.setUsersContent(path, newContent)
+	// Deserializar el bloque
+	err := useBlock.Deserialize(path, int64(sb.S_block_start+(1*sb.S_block_size)))
 	if err != nil {
 		return err
 	}
 
-    return nil
+	useContent := sb.getUsersContent(path)
+
+	fmt.Println("Tamaño del bloque: ", len(useContent))
+
+	// Encontrar dónde termina realmente el contenido (primer byte nulo o fin del array)
+	var contentEndPos int
+	for i, b := range useContent {
+		if b == 0 {
+			contentEndPos = i
+			break
+		}
+	}
+	// Si no hay bytes nulos, usar todo el array
+	if contentEndPos == 0 {
+		contentEndPos = len(useContent)
+	}
+
+	// Obtener solo el contenido real (sin bytes nulos)
+	content := string(useContent[:contentEndPos])
+
+	fmt.Println("Tamaño del contenido real: ", len(content))
+	fmt.Println("Contenido Grup: ", content)
+
+	// Separar el contenido por líneas
+	lines := strings.Split(content, "\n")
+
+	// Eliminar el último elemento si está vacío
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+
+	countGrupos := 0
+	for _, line := range lines {
+		parts := strings.Split(line, ",")
+
+		fmt.Println("Partes: ", parts)
+
+		if len(parts) > 1 && parts[1] == "G" {
+			fmt.Println("Grupo: ", parts[2])
+			countGrupos++
+			if parts[2] == name {
+				fmt.Println("Grupo ya existe")
+				return fmt.Errorf("grupo ya existe")
+			}
+		}
+	}
+
+	// Si el grupo no existe, agregarlo
+	newGrupo := fmt.Sprintf("%d,G,%s\n", countGrupos+1, name)
+	newContent := content + newGrupo
+	fmt.Println("Nuevo grupo: ", newGrupo)
+	fmt.Println("Contenido nuevo: ", newContent)
+	fmt.Println("Tamaño del nuevo contenido: ", len(newContent))
+
+	err = sb.setUsersContent(path, newContent)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
+
 func (sb *SuperBlock) removeGroupInInode(name string, path string) error {
 	userBlock := &FileBlock{}
 
@@ -947,7 +942,7 @@ func (sb *SuperBlock) removeGroupInInode(name string, path string) error {
 
 	// Obtener solo el contenido real (sin bytes nulos)
 	content := string(useContent[:contentEndPos])
-	
+
 	fmt.Println("Tamaño del contenido real: ", len(content))
 	fmt.Println("Contenido Grup: ", content)
 
@@ -966,30 +961,30 @@ func (sb *SuperBlock) removeGroupInInode(name string, path string) error {
 
 	for i, line := range lines {
 		parts := strings.Split(line, ",")
-		
+
 		fmt.Println("Partes: ", parts)
-		
+
 		if len(parts) > 2 && parts[1] == "G" && parts[2] == name {
 			fmt.Println("Grupo encontrado: ", parts[2])
-			
+
 			if parts[0] == "0" {
 				return fmt.Errorf("El grupo ya no existe porque ya fue eliminado")
 			}
-			
+
 			// Modificar el GID a 0 para marcar como eliminado
 			parts[0] = "0"
 			grupoEncontrado = true
-			
+
 			// Reconstruir la línea con el GID modificado
 			modifiedLine := strings.Join(parts, ",")
-			
+
 			// Añadir la línea modificada
 			newContent.WriteString(modifiedLine)
 		} else {
 			// Añadir la línea sin modificar
 			newContent.WriteString(line)
 		}
-		
+
 		// Añadir salto de línea si no es la última línea
 		if i < len(lines)-1 {
 			newContent.WriteString("\n")
@@ -1014,40 +1009,40 @@ func (sb *SuperBlock) removeGroupInInode(name string, path string) error {
 		return err
 	}
 
-    return nil
+	return nil
 }
 
 func (sb *SuperBlock) createUserInInode(user string, pass string, grp string, path string) error {
 	userBlock := &FileBlock{}
 
-    // Deserializar el bloque
-    err := userBlock.Deserialize(path, int64(sb.S_block_start+(1*sb.S_block_size)))
-    if err != nil {
-        return err
-    }
+	// Deserializar el bloque
+	err := userBlock.Deserialize(path, int64(sb.S_block_start+(1*sb.S_block_size)))
+	if err != nil {
+		return err
+	}
 
 	useContent := sb.getUsersContent(path)
 
-    fmt.Println("Tamaño del bloque: ", len(useContent))
+	fmt.Println("Tamaño del bloque: ", len(useContent))
 
-    // Encontrar dónde termina realmente el contenido (primer byte nulo o fin del array)
-    var contentEndPos int
-    for i, b := range useContent {
-        if b == 0 {
-            contentEndPos = i
-            break
-        }
-    }
-    // Si no hay bytes nulos, usar todo el array
-    if contentEndPos == 0 {
-        contentEndPos = len(useContent)
-    }
+	// Encontrar dónde termina realmente el contenido (primer byte nulo o fin del array)
+	var contentEndPos int
+	for i, b := range useContent {
+		if b == 0 {
+			contentEndPos = i
+			break
+		}
+	}
+	// Si no hay bytes nulos, usar todo el array
+	if contentEndPos == 0 {
+		contentEndPos = len(useContent)
+	}
 
-    // Obtener solo el contenido real (sin bytes nulos)
-    content := string(useContent[:contentEndPos])
-    
-    fmt.Println("Tamaño del contenido real: ", len(content))
-    fmt.Println("Contenido Grup: ", content)
+	// Obtener solo el contenido real (sin bytes nulos)
+	content := string(useContent[:contentEndPos])
+
+	fmt.Println("Tamaño del contenido real: ", len(content))
+	fmt.Println("Contenido Grup: ", content)
 
 	lines := strings.Split(content, "\n")
 
@@ -1055,13 +1050,13 @@ func (sb *SuperBlock) createUserInInode(user string, pass string, grp string, pa
 		lines = lines[:len(lines)-1]
 	}
 
-	userCount := 0 // Contador de usuarios
+	userCount := 0           // Contador de usuarios
 	userGroupExists := false // Variable para verificar si el grupo existe
 	for _, line := range lines {
 		parts := strings.Split(line, ",")
-		
+
 		fmt.Println("Partes: ", parts)
-		
+
 		if len(parts) > 1 && parts[1] == "U" {
 			fmt.Println("Usuario: ", parts[3])
 			userCount++
@@ -1069,7 +1064,7 @@ func (sb *SuperBlock) createUserInInode(user string, pass string, grp string, pa
 				fmt.Println("Usuario ya existe")
 				return fmt.Errorf("usuario ya existe")
 			}
-			
+
 		}
 		// verificar si es un grupo
 		if len(parts) > 1 && parts[1] == "G" {
@@ -1103,7 +1098,7 @@ func (sb *SuperBlock) createUserInInode(user string, pass string, grp string, pa
 		return err
 	}
 
-    return nil
+	return nil
 
 }
 
@@ -1135,7 +1130,7 @@ func (sb *SuperBlock) removeUserInInode(user string, path string) error {
 
 	// Obtener solo el contenido real (sin bytes nulos)
 	content := string(useContent[:contentEndPos])
-	
+
 	fmt.Println("Tamaño del contenido real: ", len(content))
 	fmt.Println("Contenido Grup: ", content)
 
@@ -1150,23 +1145,23 @@ func (sb *SuperBlock) removeUserInInode(user string, path string) error {
 	var newContent strings.Builder
 	for _, line := range lines {
 		parts := strings.Split(line, ",")
-		
+
 		fmt.Println("Partes: ", parts)
-		
+
 		if len(parts) > 1 && parts[1] == "U" && parts[3] == user {
 			fmt.Println("Usuario encontrado: ", parts[3])
-			
+
 			if parts[0] == "0" {
 				return fmt.Errorf("El usuario ya no existe porque ya fue eliminado")
 			}
-			
+
 			// Modificar el UID a 0 para marcar como eliminado
 			parts[0] = "0"
 			userExists = true
-			
+
 			// Reconstruir la línea con el UID modificado
 			modifiedLine := strings.Join(parts, ",")
-			
+
 			// Añadir la línea modificada
 			newContent.WriteString(modifiedLine)
 		} else {
@@ -1181,7 +1176,7 @@ func (sb *SuperBlock) removeUserInInode(user string, path string) error {
 			// Añadir salto de línea al final
 			newContent.WriteString("\n")
 		}
-		
+
 	}
 
 	if !userExists {
@@ -1198,7 +1193,7 @@ func (sb *SuperBlock) removeUserInInode(user string, path string) error {
 		return err
 	}
 
-    return nil
+	return nil
 }
 
 func (sb *SuperBlock) changeGroupInInode(user string, group string, path string) error {
@@ -1242,23 +1237,23 @@ func (sb *SuperBlock) changeGroupInInode(user string, group string, path string)
 
 	for _, line := range lines {
 		parts := strings.Split(line, ",")
-		
+
 		fmt.Println("Partes: ", parts)
-		
+
 		if len(parts) > 1 && parts[1] == "U" && parts[3] == user {
 			fmt.Println("Usuario encontrado: ", parts[3])
-			
+
 			if parts[0] == "0" {
 				fmt.Println("El usuario ya no existe porque ya fue eliminado")
 				return fmt.Errorf("el usuario ya no existe porque ya fue eliminado")
 			}
-			
+
 			// Modificar el grupo
 			parts[2] = group
 			usuarioEncontrado = true
-			
+
 			modifiedLine := strings.Join(parts, ",")
-			
+
 			newContent.WriteString(modifiedLine)
 		} else {
 			newContent.WriteString(line)
@@ -1303,7 +1298,7 @@ func (sb *SuperBlock) changeGroupInInode(user string, group string, path string)
 		return err
 	}
 
-    return nil
+	return nil
 }
 
 // funcion para obtener el contenido de users.txt
@@ -1321,7 +1316,7 @@ func (sb *SuperBlock) getUsersContent(path string) string {
 	contentBlocks := "" // para almacenar el contenido de los bloques
 	for _, blockIndex := range inode.I_block {
 		if blockIndex == -1 {
-			break	
+			break
 		}
 
 		// crear un nuevo bloque de archivo
@@ -1340,8 +1335,7 @@ func (sb *SuperBlock) getUsersContent(path string) string {
 		// agregar el contenido del bloque al contenido total
 		contentBlocks += blockContent
 		fmt.Println("Contenido total: ", contentBlocks)
-		
-		
+
 	}
 
 	// returnar el contenido
@@ -1353,7 +1347,7 @@ func (sb *SuperBlock) setUsersContent(path string, content string) error {
 	fmt.Println("Proximo bloque disponible: ", sb.S_blocks_count)
 	// obtener el inodo para users.txt, este siempre será el inodo 1
 	// dividir el contenido en bloques de 64 bytes - contentDivide
-	// iterar sobre cada bloque del inodo y settear el contenido 
+	// iterar sobre cada bloque del inodo y settear el contenido
 	// si len(contentDivide) > bloques utilizados, entonces se necesita crear nuevo bloque para alamacenar el contenido
 	inode := &Inode{}
 	err := inode.Deserialize(path, int64(sb.S_inode_start+(1*sb.S_inode_size)))
@@ -1446,4 +1440,3 @@ func (sb *SuperBlock) setUsersContent(path string, content string) error {
 
 	return nil
 }
-

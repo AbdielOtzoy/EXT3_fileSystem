@@ -48,7 +48,7 @@ func ParseRep(tokens []string) (string, error) {
 			}
 			cmd.path = value
 		case "-name":
-			validNames := []string{"mbr", "disk", "inode", "block", "bm_inode", "bm_block", "sb", "file", "ls", "tree"}
+			validNames := []string{"mbr", "disk", "inode", "block", "bm_inode", "bm_block", "sb", "file", "ls", "tree", "fs"}
 			if !contains(validNames, value) {
 				return "", errors.New("nombre inválido, debe ser uno de los siguientes: mbr, disk, inode, block, bm_inode, bm_block, sb, file, ls")
 			}
@@ -150,6 +150,12 @@ func commandRep(rep *REP) (string, error) {
 			fmt.Printf("Error: %v\n", err)
 		}
 		return fmt.Sprintf("LS report generated at %s", rep.path), nil
+	case "fs":
+		err = reports.GenerateFileSystemJSON(mountedSb, mountedDiskPath, rep.path)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		}
+		return fmt.Sprintf("File system report generated at %s", rep.path), nil
 
 	}
 

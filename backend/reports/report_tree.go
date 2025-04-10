@@ -1,4 +1,4 @@
-package reports 
+package reports
 
 import (
 	structures "backend/structures"
@@ -42,8 +42,8 @@ func generateInodeTreeContent(superblock *structures.SuperBlock, diskPath string
 			<tr><td bgcolor="lightgray"><b>i_type</b></td><td>%c</td></tr>
 			<tr><td bgcolor="lightgray"><b>i_perm</b></td><td>%s</td></tr>
 			<tr><td colspan="2" bgcolor="lightgreen"><b>Bloques Directos</b></td></tr>
-	`, inodeIndex, inodeIndex, inode.I_uid, inode.I_gid, inode.I_size, 
-	   atime, ctime, mtime, rune(inode.I_type[0]), string(inode.I_perm[:]))
+	`, inodeIndex, inodeIndex, inode.I_uid, inode.I_gid, inode.I_size,
+		atime, ctime, mtime, rune(inode.I_type[0]), string(inode.I_perm[:]))
 
 	// Add direct blocks (0-11)
 	for i := 0; i < 12; i++ {
@@ -58,7 +58,6 @@ func generateInodeTreeContent(superblock *structures.SuperBlock, diskPath string
 			<tr><td>Triple</td><td>%d</td></tr>
 		</table>>];
 	`, inode.I_block[12], inode.I_block[13], inode.I_block[14])
-
 
 	var connections string
 	var blockNodes string
@@ -98,7 +97,7 @@ func generateInodeTreeContent(superblock *structures.SuperBlock, diskPath string
 				if name == ".." {
 					continue
 				}
-				
+
 				entryType := "Archivo"
 				if content.B_inodo != -1 {
 					// Check if the pointed inode is a directory
@@ -108,7 +107,7 @@ func generateInodeTreeContent(superblock *structures.SuperBlock, diskPath string
 						entryType = "Carpeta"
 					}
 				}
-				
+
 				blockNode += fmt.Sprintf(`
 					<tr>
 						<td>%d</td>

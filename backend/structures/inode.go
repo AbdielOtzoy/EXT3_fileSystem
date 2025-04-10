@@ -11,15 +11,15 @@ import (
 // Inode represents a filesystem inode, which stores metadata about a file or directory.
 // It includes information such as ownership, size, timestamps, block pointers, type, and permissions.
 type Inode struct {
-	I_uid   int32      // User ID of the owner
-	I_gid   int32      // Group ID of the owner
-	I_size  int32      // Size of the file in bytes
-	I_atime float32    // Last access time (as a Unix timestamp)
-	I_ctime float32    // Creation time (as a Unix timestamp)
-	I_mtime float32    // Last modification time (as a Unix timestamp)
-	I_block [15]int32  // Pointers to data blocks (15 blocks)
-	I_type  [1]byte    // Type of the inode (e.g., file, directory)
-	I_perm  [3]byte    // Permissions (e.g., read, write, execute)
+	I_uid   int32     // User ID of the owner
+	I_gid   int32     // Group ID of the owner
+	I_size  int32     // Size of the file in bytes
+	I_atime float32   // Last access time (as a Unix timestamp)
+	I_ctime float32   // Creation time (as a Unix timestamp)
+	I_mtime float32   // Last modification time (as a Unix timestamp)
+	I_block [15]int32 // Pointers to data blocks (15 blocks)
+	I_type  [1]byte   // Type of the inode (e.g., file, directory)
+	I_perm  [3]byte   // Permissions (e.g., read, write, execute)
 	// Total size: 88 bytes
 }
 

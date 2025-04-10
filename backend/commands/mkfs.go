@@ -1,7 +1,7 @@
 package commands
 
 import (
-	stores	"backend/stores"
+	stores "backend/stores"
 	structures "backend/structures"
 	"encoding/binary"
 	"errors"
@@ -15,13 +15,14 @@ import (
 type MKFS struct {
 	id  string
 	typ string
+	fs  string
 }
 
 func ParseMkfs(tokens []string) (string, error) {
 	cmd := &MKFS{}
 
 	args := strings.Join(tokens, " ")
-	re := regexp.MustCompile(`-id=[^\s]+|-type=[^\s]+`)
+	re := regexp.MustCompile(`-id=[^\s]+|-type=[^\s]+|-fs=[23]fs`)
 	matches := re.FindAllString(args, -1)
 
 	for _, match := range matches {
@@ -46,6 +47,11 @@ func ParseMkfs(tokens []string) (string, error) {
 				return "", errors.New("el tipo debe ser full")
 			}
 			cmd.typ = value
+		case "-fs":
+			if value != "2fs" && value != "3fs" {
+				return "", errors.New("el tipo de sistema de archivos debe ser 2 o 3")
+			}
+			cmd.fs = value
 		default:
 			return "", fmt.Errorf("parámetro desconocido: %s", key)
 		}
@@ -59,45 +65,63 @@ func ParseMkfs(tokens []string) (string, error) {
 		cmd.typ = "full"
 	}
 
+	// Si no se proporcionó el sistema de archivos, se establece por defecto a "2fs"
+	if cmd.fs == "" {
+		cmd.fs = "2fs"
+	}
+
 	err := commandMkfs(cmd)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
 
-	return fmt.Sprintf("Se ha formateado la partición con id: %s", cmd.id), nil
+	return fmt.Sprintf("MKFS: Sistema de archivos creado exitosamente\n"+
+		"-> ID: %s\n"+
+		"-> Tipo: %s\n"+
+		"-> Sistema de archivos: %s",
+		cmd.id,
+		cmd.typ,
+		map[string]string{"2fs": "EXT2", "3fs": "EXT3"}[cmd.fs]), nil
 }
-
 func commandMkfs(mkfs *MKFS) error {
+	fmt.Println("Creando sistema de archivos...", mkfs.fs)
+
+	// Obtener la partición montada
 	mountedPartition, partitionPath, err := stores.GetMountedPartition(mkfs.id)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("\nPatición montada:")
-	mountedPartition.PrintPartition()
+	// Calcular el valor de n
+	n := calculateN(mountedPartition, mkfs.fs)
 
-	n := calculateN(mountedPartition)
+	fmt.Printf("Valor de N: %d\n", n)
 
-	fmt.Println("\nValor de n:", n)
+	// Inicializar un nuevo superbloque
+	superBlock := createSuperBlock(mountedPartition, n, mkfs.fs)
 
-	superBlock := createSuperBlock(mountedPartition, n)
-
-	fmt.Println("\nSuperBlock:")
-	superBlock.Print()
-
+	// Crear los bitmaps
 	err = superBlock.CreateBitMaps(partitionPath)
 	if err != nil {
 		return err
 	}
 
-	err = superBlock.CreateUsersFile(partitionPath)
-	if err != nil {
-		return err
+	// Validar que sistema de archivos es
+	if superBlock.S_filesystem_type == 3 {
+		// Crear archivo users.txt ext3
+		err = superBlock.CreateUsersFileExt3(partitionPath, int64(mountedPartition.Part_start+int32(binary.Size(structures.SuperBlock{}))))
+		if err != nil {
+			return err
+		}
+	} else {
+		// Crear archivo users.txt ext2
+		err = superBlock.CreateUsersFileExt2(partitionPath)
+		if err != nil {
+			return err
+		}
 	}
 
-	fmt.Println("\nSuperBlock actualizado:")
-	superBlock.Print()
-
+	// Serializar el superbloque
 	err = superBlock.Serialize(partitionPath, int64(mountedPartition.Part_start))
 	if err != nil {
 		return err
@@ -106,22 +130,50 @@ func commandMkfs(mkfs *MKFS) error {
 	return nil
 }
 
-func calculateN(partition *structures.Partition) int32 {
+func calculateN(partition *structures.Partition, fs string) int32 {
+	// Numerador: tamaño de la partición menos el tamaño del superblock
 	numerator := int(partition.Part_size) - binary.Size(structures.SuperBlock{})
-	denominator := 4 + binary.Size(structures.Inode{}) + 3*binary.Size(structures.FileBlock{})
+
+	// Denominador base: 4 + tamaño de inodos + 3 * tamaño de bloques de archivo
+	baseDenominator := 4 + binary.Size(structures.Inode{}) + 3*binary.Size(structures.FileBlock{})
+
+	// Si el sistema de archivos es "3fs", se añade el tamaño del journaling al denominador
+	temp := 0
+	if fs == "3fs" {
+		temp = binary.Size(structures.Journal{})
+	}
+
+	// Denominador final
+	denominator := baseDenominator + temp
+
+	// Calcular n
 	n := math.Floor(float64(numerator) / float64(denominator))
 
 	return int32(n)
 }
 
-func createSuperBlock(partition *structures.Partition, n int32) *structures.SuperBlock {
-	bm_inode_start := partition.Part_start + int32(binary.Size(structures.SuperBlock{}))
-	bm_block_start := bm_inode_start + n
-	inode_start := bm_block_start + (3 * n)
-	block_start := inode_start + (int32(binary.Size(structures.Inode{})) * n)
+func createSuperBlock(partition *structures.Partition, n int32, fs string) *structures.SuperBlock {
+	// Calcular punteros de las estructuras
+	journal_start, bm_inode_start, bm_block_start, inode_start, block_start := calculateStartPositions(partition, fs, n)
 
+	fmt.Printf("Journal Start: %d\n", journal_start)
+	fmt.Printf("Bitmap Inode Start: %d\n", bm_inode_start)
+	fmt.Printf("Bitmap Block Start: %d\n", bm_block_start)
+	fmt.Printf("Inode Start: %d\n", inode_start)
+	fmt.Printf("Block Start: %d\n", block_start)
+
+	// Tipo de sistema de archivos
+	var fsType int32
+
+	if fs == "2fs" {
+		fsType = 2
+	} else {
+		fsType = 3
+	}
+
+	// Crear un nuevo superbloque
 	superBlock := &structures.SuperBlock{
-		S_filesystem_type:   2,
+		S_filesystem_type:   fsType,
 		S_inodes_count:      0,
 		S_blocks_count:      0,
 		S_free_inodes_count: int32(n),
@@ -140,4 +192,29 @@ func createSuperBlock(partition *structures.Partition, n int32) *structures.Supe
 		S_block_start:       block_start,
 	}
 	return superBlock
+}
+
+func calculateStartPositions(partition *structures.Partition, fs string, n int32) (int32, int32, int32, int32, int32) {
+	superblockSize := int32(binary.Size(structures.SuperBlock{}))
+	journalSize := int32(binary.Size(structures.Journal{}))
+	inodeSize := int32(binary.Size(structures.Inode{}))
+
+	// Inicializar posiciones
+	// EXT2
+	journalStart := int32(0)
+	bmInodeStart := partition.Part_start + superblockSize
+	bmBlockStart := bmInodeStart + n
+	inodeStart := bmBlockStart + (3 * n)
+	blockStart := inodeStart + (inodeSize * n)
+
+	// Ajustar para EXT3
+	if fs == "3fs" {
+		journalStart = partition.Part_start + superblockSize
+		bmInodeStart = journalStart + (journalSize * n)
+		bmBlockStart = bmInodeStart + n
+		inodeStart = bmBlockStart + (3 * n)
+		blockStart = inodeStart + (inodeSize * n)
+	}
+
+	return journalStart, bmInodeStart, bmBlockStart, inodeStart, blockStart
 }
