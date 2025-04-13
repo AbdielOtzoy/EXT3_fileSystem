@@ -123,7 +123,7 @@ const FileExplorer = () => {
                     const diskId = `disk-${diskIndex}`;
                     return renderTreeItem({
                         id: diskId,
-                        name: `Disco ${diskIndex + 1}: ${disk.diskPath.split('/').pop()}`,
+                        name: `${disk.diskPath.split('/').pop()}`,
                         type: 'disk',
                         icon: <Image src="/disk.svg" alt="Hard Drive" width={20} height={20} />,
                         size: `${Math.round(disk.diskSize / (1024 * 1024))} MB`,

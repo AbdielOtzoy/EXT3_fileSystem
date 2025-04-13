@@ -21,12 +21,21 @@ func ParseGetfs(tokens []string) (string, error) {
 	}
 
 	var disks []map[string]interface{}
+	seenPaths := make(map[string]bool) // Mapa para trackear paths ya procesados
 
 	for _, id := range stores.GetMountedPartitions() {
 		mountedMbr, mountedSb, mountedDiskPath, err := stores.GetMountedPartitionRep(id)
 		if err != nil {
 			return "", fmt.Errorf("error al obtener la partición montada: %v", err)
 		}
+
+		// Verificar si ya hemos procesado este path de disco
+		if _, exists := seenPaths[mountedDiskPath]; exists {
+			continue // Saltar este disco, ya fue procesado
+		}
+
+		// Marcar este path como procesado
+		seenPaths[mountedDiskPath] = true
 
 		disk := map[string]interface{}{
 			"diskPath":      mountedDiskPath,

@@ -10,15 +10,15 @@ import (
 	"strings"
 )
 
-
 type FDISK struct {
-	Size 	int
-	unit 	string
-	path 	string
-	type_ 	string
-	fit 	string
-	name 	string
-
+	Size   int
+	unit   string
+	path   string
+	type_  string
+	fit    string
+	name   string
+	delete string
+	add    int
 }
 
 func ParseFdisk(tokens []string) (string, error) {
@@ -26,7 +26,7 @@ func ParseFdisk(tokens []string) (string, error) {
 
 	args := strings.Join(tokens, " ") // join the tokens to get the arguments
 
-	re := regexp.MustCompile(`-size=\d+|-unit=[kKmMbB]|-fit=[bBfF]{2}|-path="[^"]+"|-path=[^\s]+|-type=[pPeElL]|-name="[^"]+"|-name=[^\s]+`)
+	re := regexp.MustCompile(`-size=\d+|-unit=[kKmMbB]|-fit=[bBfF]{2}|-path="[^"]+"|-path=[^\s]+|-type=[pPeElL]|-name="[^"]+"|-name=[^\s]+|-delete="(fast|full)"|-delete=(fast|full)|-add=[-+]?\d+(\.\d+)?`)
 
 	matches := re.FindAllString(args, -1) // find all the matches
 
@@ -42,48 +42,58 @@ func ParseFdisk(tokens []string) (string, error) {
 		}
 
 		switch key {
-			case "-size":
-				size, err := strconv.Atoi(value) // convert the value to integer
-				if err != nil || size <= 0 {
-					return "", errors.New("invalid size")
-				}
-				cmd.Size = size
-			case "-unit":
-				if value != "K" && value != "M" && value != "B" && value != "k" && value != "m" && value != "b" {
-					// K = Kilobytes, M = Megabytes, B = Bytes
-					return "", errors.New("invalid unit")
-				}
-				cmd.unit = strings.ToUpper(value)
-			case "-fit":
-				value = strings.ToUpper(value)
-				if value != "BF" && value != "FF" && value != "WF" {
-					return "", errors.New("invalid fit")
-				}
-				cmd.fit = value
-			case "-path":
-				if value == "" {
-					return "", errors.New("invalid path")
-				}
-				cmd.path = value
-			case "-type":
-				value = strings.ToUpper(value)
-				if value != "P" && value != "E" && value != "L" {
-					return "", errors.New("invalid type")
-				}
-				cmd.type_ = value
-			case "-name":
-				if value == "" {
-					return "", errors.New("invalid name")
-				}
-				cmd.name = value
-			default:
-				return "", fmt.Errorf("invalid argument: %s", key)
+		case "-size":
+			size, err := strconv.Atoi(value) // convert the value to integer
+			if err != nil || size <= 0 {
+				return "", errors.New("invalid size")
+			}
+			cmd.Size = size
+		case "-unit":
+			if value != "K" && value != "M" && value != "B" && value != "k" && value != "m" && value != "b" {
+				// K = Kilobytes, M = Megabytes, B = Bytes
+				return "", errors.New("invalid unit")
+			}
+			cmd.unit = strings.ToUpper(value)
+		case "-fit":
+			value = strings.ToUpper(value)
+			if value != "BF" && value != "FF" && value != "WF" {
+				return "", errors.New("invalid fit")
+			}
+			cmd.fit = value
+		case "-path":
+			if value == "" {
+				return "", errors.New("invalid path")
+			}
+			cmd.path = value
+		case "-type":
+			value = strings.ToUpper(value)
+			if value != "P" && value != "E" && value != "L" {
+				return "", errors.New("invalid type")
+			}
+			cmd.type_ = value
+		case "-name":
+			if value == "" {
+				return "", errors.New("invalid name")
+			}
+			cmd.name = value
+		case "-delete":
+			if value != "fast" && value != "full" {
+				return "", errors.New("invalid delete option")
+			}
+			cmd.delete = value
+		case "-add":
+			if value == "" {
+				return "", errors.New("invalid add option")
+			}
+			num, err := strconv.Atoi(value)
+			if err != nil {
+				return "", errors.New("invalid add option")
+			}
+			cmd.add = num
+		default:
+			return "", fmt.Errorf("invalid argument: %s", key)
 
 		}
-	}
-
-	if cmd.Size == 0 {
-		return "", errors.New("size is required")
 	}
 
 	if cmd.path == "" {
@@ -111,7 +121,17 @@ func ParseFdisk(tokens []string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("Partition %s created successfully", cmd.name), nil
+	return fmt.Sprintf("FDISK: Comando ejecutado exitosamente\n"+
+		"-> Tipo: %s\n"+
+		"-> Fit: %s\n"+
+		"-> Name: %s\n"+
+		"-> Delete: %s\n"+
+		"-> Add: %d\n",
+		cmd.type_,
+		cmd.fit,
+		cmd.name,
+		cmd.delete,
+		cmd.add), nil
 }
 
 func commandFdisk(fdisk *FDISK) error {
@@ -119,9 +139,45 @@ func commandFdisk(fdisk *FDISK) error {
 	fmt.Println("size:", fdisk.Size)
 	fmt.Println("unit:", fdisk.unit)
 	fmt.Println("Size in bytes:", sizeBytes)
+	fmt.Println("type:", fdisk.type_)
+	fmt.Println("fit:", fdisk.fit)
+	fmt.Println("name:", fdisk.name)
+	fmt.Println("delete:", fdisk.delete)
+	fmt.Println("add:", fdisk.add)
 	if err != nil {
 		fmt.Println("error converting size to bytes:", err)
 		return err
+	}
+
+	if fdisk.delete != "" {
+		if fdisk.delete == "fast" {
+			err = deletePartition(fdisk)
+			if err != nil {
+				fmt.Println("error deleting partition:", err)
+				return err
+			}
+		} else if fdisk.delete == "full" {
+			err = deletePartition(fdisk)
+			if err != nil {
+				fmt.Println("error deleting partition:", err)
+				return err
+			}
+		}
+		return nil
+	}
+
+	if fdisk.add != 0 {
+		sizeToAdd, err := utils.ConvertToBytes(fdisk.add, fdisk.unit)
+		if err != nil {
+			fmt.Println("error converting size to bytes:", err)
+			return err
+		}
+		err = addPartition(fdisk, sizeToAdd)
+		if err != nil {
+			fmt.Println("error adding partition:", err)
+			return err
+		}
+		return nil
 	}
 
 	if fdisk.type_ == "P" {
@@ -131,19 +187,19 @@ func commandFdisk(fdisk *FDISK) error {
 			return err
 		}
 	} else if fdisk.type_ == "E" {
-		fmt.Println("extended partition")	
+		fmt.Println("extended partition")
 		err = createExtendedPartition(fdisk, sizeBytes)
 		if err != nil {
 			fmt.Println("error creating extended partition:", err)
 			return err
-		} 
+		}
 	} else if fdisk.type_ == "L" {
 		fmt.Println("logical partition")
-		 err = createLogicalPartition(fdisk, sizeBytes)
+		err = createLogicalPartition(fdisk, sizeBytes)
 		if err != nil {
 			fmt.Println("error creating logical partition:", err)
 			return err
-		} 
+		}
 	}
 
 	return nil
@@ -180,7 +236,7 @@ func createPrimaryPartition(fdisk *FDISK, sizeBytes int) error {
 	availablePartition.CreatePartition(startPartition, sizeBytes, fdisk.type_, fdisk.fit, fdisk.name)
 
 	fmt.Println("MBR after creating primary partition")
-	availablePartition.PrintPartition()	
+	availablePartition.PrintPartition()
 
 	if availablePartition != nil {
 		mbr.Mbr_partitions[index] = *availablePartition // update the partition
@@ -257,14 +313,13 @@ func createExtendedPartition(fdisk *FDISK, sizeBytes int) error {
 		fmt.Println("error serializing EBR:", err)
 	}
 
-	fmt.Println("\nParticiones del MBR:")	
+	fmt.Println("\nParticiones del MBR:")
 	mbr.PrintPartitions()
 
 	err = mbr.SerializeMBR(fdisk.path)
 	if err != nil {
 		fmt.Println("error serializing MBR", err)
 	}
-
 
 	if err != nil {
 		fmt.Println("error creating EBR:", err)
@@ -356,8 +411,6 @@ func createLogicalPartition(fdisk *FDISK, logicalSize int) error {
 		return err
 	}
 
-	
-
 	// Serialize the MBR
 	err = mbr.SerializeMBR(fdisk.path)
 	if err != nil {
@@ -366,5 +419,86 @@ func createLogicalPartition(fdisk *FDISK, logicalSize int) error {
 	}
 
 	fmt.Println("Logical partition created successfully")
+	return nil
+}
+
+// Add or delete space in a partition
+func addPartition(fdisk *FDISK, sizeBytes int) error {
+	var mbr structures.MBR
+
+	err := mbr.DeserializeMBR(fdisk.path)
+	if err != nil {
+		fmt.Println("error reading MBR:", err)
+		return err
+	}
+
+	fmt.Println("sizeBytes: ", sizeBytes)
+
+	fmt.Println("MBR before adding space")
+	mbr.PrintPartitions()
+
+	partitionFound, index := mbr.GetPartitionByName(fdisk.name)
+	if partitionFound == nil {
+		fmt.Println("partition not found")
+		return errors.New("partition not found")
+	}
+
+	freeSpace := mbr.GetFreeSpace()
+
+	if freeSpace < int32(sizeBytes) {
+		fmt.Println("not enough space in the disk")
+		return errors.New("not enough space in the disk")
+	}
+
+	mbr.Mbr_partitions[index-1].Part_size += int32(sizeBytes)
+
+	fmt.Println("MBR after adding space")
+	mbr.PrintPartitions()
+
+	// Serialize the MBR
+	err = mbr.SerializeMBR(fdisk.path)
+	if err != nil {
+		fmt.Println("error serializing MBR", err)
+		return err
+	}
+
+	fmt.Println("Partition resized successfully")
+	return nil
+}
+
+// Delete a partition from the MBR
+func deletePartition(fdisk *FDISK) error {
+	var mbr structures.MBR
+
+	err := mbr.DeserializeMBR(fdisk.path)
+	if err != nil {
+		fmt.Println("error reading MBR:", err)
+		return err
+	}
+
+	partitionFound, index := mbr.GetPartitionByName(fdisk.name)
+	if partitionFound == nil {
+		fmt.Println("partition not found")
+		return errors.New("partition not found")
+	}
+
+	// Set the partition status to available
+	partitionFound.DeletePartition()
+
+	if fdisk.delete == "full" {
+		// fill the space with the \0 character
+		fmt.Println("filling space with 0 character")
+	}
+
+	mbr.Mbr_partitions[index-1] = *partitionFound
+
+	// Serialize the MBR
+	err = mbr.SerializeMBR(fdisk.path)
+	if err != nil {
+		fmt.Println("error serializing MBR", err)
+		return err
+	}
+
+	fmt.Println("Partition deleted successfully")
 	return nil
 }

@@ -3,16 +3,15 @@ package structures
 import "fmt"
 
 type Partition struct {
-	Part_status         [1]byte // N Available, 0 created, 1 mounted
-	Part_type           [1]byte
-	Part_fit            [1]byte
-	Part_start          int32
-	Part_size           int32
-	Part_name           [16]byte
-	Part_correlative   	int32
-	Part_id 		   	[4]byte
+	Part_status      [1]byte // N Available, 0 created, 1 mounted
+	Part_type        [1]byte
+	Part_fit         [1]byte
+	Part_start       int32
+	Part_size        int32
+	Part_name        [16]byte
+	Part_correlative int32
+	Part_id          [4]byte
 }
-
 
 func (p *Partition) CreatePartition(partStart, partSize int, partType, partFit, partName string) {
 
@@ -21,7 +20,7 @@ func (p *Partition) CreatePartition(partStart, partSize int, partType, partFit, 
 	p.Part_size = int32(partSize)
 
 	if len(partType) > 0 {
-		p.Part_type[0] = partType[0] 
+		p.Part_type[0] = partType[0]
 	}
 
 	if len(partFit) > 0 {
@@ -63,8 +62,19 @@ func (p *Partition) GetLastEBR(ebr *EBR, path string) (*EBR, int32, error) {
 	ebr.PrintEBR()
 
 	return ebr, next, nil
-
 }
+
+func (p *Partition) DeletePartition() {
+	p.Part_status[0] = 'N' // 0 = Created, -1 = No created
+	p.Part_start = -1
+	p.Part_size = -1
+	p.Part_name = [16]byte{'N'}
+	p.Part_correlative = -1
+	p.Part_id = [4]byte{'N'}
+	p.Part_type = [1]byte{'N'}
+	p.Part_fit = [1]byte{'N'}
+}
+
 func (p *Partition) PrintPartition() {
 	partStatus := rune(p.Part_status[0])
 	partType := rune(p.Part_type[0])
