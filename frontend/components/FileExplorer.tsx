@@ -133,7 +133,7 @@ const FileExplorer = () => {
                                     const partitionId = `${diskId}/partition-${partitionIndex}`;
                                     return renderTreeItem({
                                         id: partitionId,
-                                        name: `${partition.partitionName} (${partition.partitionType === 'P' ? 'Primaria' : 'Extendida'})`,
+                                        name: `${partition.partitionName} (${partition.partitionType === 'P' ? 'Primaria' : partition.partitionName === 'N' ? "Disponible" : "Extendida"})`,
                                         type: 'partition',
                                         icon: <FaFolder className="text-blue-500" />,
                                         size: `${Math.round(partition.partitionSize / (1024 * 1024))} MB`,

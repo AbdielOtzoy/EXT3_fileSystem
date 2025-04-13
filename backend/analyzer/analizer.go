@@ -26,6 +26,8 @@ func Analyzer(input string) (string, error) {
 		return commands.ParseFdisk(tokens[1:])
 	case "mount":
 		return commands.ParseMount(tokens[1:])
+	case "unmount":
+		return commands.ParseUnmounted(tokens[1:])
 	case "mkfs":
 		return commands.ParseMkfs(tokens[1:])
 	case "rep":

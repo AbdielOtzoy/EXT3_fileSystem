@@ -5,6 +5,7 @@ import (
 	utils "backend/utils"
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -482,12 +483,56 @@ func deletePartition(fdisk *FDISK) error {
 		return errors.New("partition not found")
 	}
 
+	// Save partition info before deletion
+	partSize := partitionFound.Part_size
+	partStart := partitionFound.Part_start
+
 	// Set the partition status to available
 	partitionFound.DeletePartition()
 
 	if fdisk.delete == "full" {
-		// fill the space with the \0 character
 		fmt.Println("filling space with 0 character")
+
+		// Open the disk file
+		file, err := os.OpenFile(fdisk.path, os.O_WRONLY, 0644)
+		if err != nil {
+			fmt.Println("error opening disk file:", err)
+			return err
+		}
+		defer file.Close()
+
+		// Seek to the start of the partition
+		_, err = file.Seek(int64(partStart), 0)
+		if err != nil {
+			fmt.Println("error seeking to partition start:", err)
+			return err
+		}
+
+		// Create a buffer filled with zeros
+		bufferSize := 1024 * 1024 // 1MB buffer
+		if partSize < int32(bufferSize) {
+			bufferSize = int(partSize)
+		}
+		zeroBuffer := make([]byte, bufferSize)
+
+		// Write zeros in chunks
+		remaining := int(partSize)
+		for remaining > 0 {
+			writeSize := bufferSize
+			if remaining < bufferSize {
+				writeSize = remaining
+			}
+
+			_, err = file.Write(zeroBuffer[:writeSize])
+			if err != nil {
+				fmt.Println("error writing zeros:", err)
+				return err
+			}
+
+			remaining -= writeSize
+		}
+
+		fmt.Printf("Successfully overwrote %d bytes with zeros\n", partSize)
 	}
 
 	mbr.Mbr_partitions[index-1] = *partitionFound
