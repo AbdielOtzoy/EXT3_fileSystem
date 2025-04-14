@@ -290,3 +290,7 @@ func (sb *SuperBlock) ChangeGroup(user string, group string, path string) error 
 func (sb *SuperBlock) Delete(path string, parentsDir []string, destDir string) error {
 	return sb.RemoveInode(path, 0, parentsDir, destDir)
 }
+
+func (sb *SuperBlock) EditFile(path string, parentsDir []string, destDir string, content string, uid int32, gid int32) error {
+	return sb.EditFileInInode(path, 0, parentsDir, destDir, content, uid, gid)
+}
