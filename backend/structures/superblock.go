@@ -286,3 +286,7 @@ func (sb *SuperBlock) ChangeGroup(user string, group string, path string) error 
 
 	return nil
 }
+
+func (sb *SuperBlock) Delete(path string, parentsDir []string, destDir string) error {
+	return sb.RemoveInode(path, 0, parentsDir, destDir)
+}
