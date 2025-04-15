@@ -10,11 +10,12 @@ import (
 )
 
 type FileSystemNodeWithRef struct {
-	Name     string        `json:"name"`
-	Type     int           `json:"type"`
-	Content  []interface{} `json:"content,omitempty"`
-	InodeRef int32         `json:"inodeRef"`
-	IsRef    bool          `json:"isRef,omitempty"`
+	Name       string        `json:"name"`
+	Type       int           `json:"type"`
+	Content    []interface{} `json:"content,omitempty"`
+	InodeRef   int32         `json:"inodeRef"`
+	IsRef      bool          `json:"isRef,omitempty"`
+	RefContent []interface{} `json:"refContent,omitempty"` // Contenido del nodo referenciado
 }
 
 func ParseGetfs(tokens []string) (string, error) {
@@ -96,10 +97,13 @@ func getFileSystemStructure(sb *structures.SuperBlock, diskPath string) *FileSys
 		return nil
 	}
 
-	// Creamos un mapa para almacenar los nodos ya generados
+	// Creamos un mapa para almacenar los nodos ya procesados completamente
 	nodesCache := make(map[int32]*FileSystemNodeWithRef)
+	// Creamos un conjunto para llevar un seguimiento de inodos que están siendo procesados actualmente
+	// para evitar referencias cíclicas durante la construcción inicial del árbol
+	processingNodes := make(map[int32]bool)
 
-	rootNode, err := generateNodeContent(sb, diskPath, 0, nodesCache)
+	rootNode, err := generateNodeContent(sb, diskPath, 0, nodesCache, processingNodes)
 	if err != nil {
 		return nil
 	}
@@ -107,21 +111,46 @@ func getFileSystemStructure(sb *structures.SuperBlock, diskPath string) *FileSys
 	return rootNode
 }
 
-func generateNodeContent(superblock *structures.SuperBlock, diskPath string, inodeIndex int32, nodesCache map[int32]*FileSystemNodeWithRef) (*FileSystemNodeWithRef, error) {
-	// Verificar si este inodo ya fue procesado
-	if node, exists := nodesCache[inodeIndex]; exists {
-		// Crear una referencia al nodo ya existente
+func generateNodeContent(superblock *structures.SuperBlock, diskPath string, inodeIndex int32,
+	nodesCache map[int32]*FileSystemNodeWithRef, processingNodes map[int32]bool) (*FileSystemNodeWithRef, error) {
+
+	// Si estamos procesando actualmente este inodo (para evitar ciclos durante la construcción)
+	if processingNodes[inodeIndex] {
+		// Crear un marcador temporal que será completado después
 		return &FileSystemNodeWithRef{
-			Name:     node.Name,
-			Type:     node.Type,
+			Name:     "processing",
+			Type:     -1, // Marcador temporal
 			InodeRef: inodeIndex,
 			IsRef:    true,
 		}, nil
 	}
 
+	// Verificar si este inodo ya fue completamente procesado
+	if node, exists := nodesCache[inodeIndex]; exists {
+		// Crear un nodo de referencia pero incluyendo una copia del contenido
+		refNode := &FileSystemNodeWithRef{
+			Name:       node.Name,
+			Type:       node.Type,
+			InodeRef:   inodeIndex,
+			IsRef:      true,
+			RefContent: make([]interface{}, 0), // Inicializar con un slice vacío
+		}
+
+		// Si el nodo original tiene contenido, copiar la referencia al contenido
+		if node.Content != nil {
+			refNode.RefContent = node.Content
+		}
+
+		return refNode, nil
+	}
+
+	// Marcar este inodo como "en procesamiento"
+	processingNodes[inodeIndex] = true
+
 	inode := &structures.Inode{}
 	err := inode.Deserialize(diskPath, int64(superblock.S_inode_start+(inodeIndex*superblock.S_inode_size)))
 	if err != nil {
+		delete(processingNodes, inodeIndex) // Limpiar el estado de procesamiento
 		return nil, err
 	}
 
@@ -130,16 +159,14 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 		Name:     "/",
 		Type:     0,
 		InodeRef: inodeIndex,
+		Content:  make([]interface{}, 0), // Inicializar con un slice vacío
 	}
-
-	// Agregar el nodo al cache antes de procesar su contenido para manejar referencias circulares
-	nodesCache[inodeIndex] = node
 
 	if inode.I_type[0] == '1' {
 		node.Type = 1
-		node.Content = []interface{}{}
 	}
 
+	// Procesamiento de bloques del inodo
 	for _, blockIndex := range inode.I_block {
 		if blockIndex == -1 {
 			break
@@ -149,6 +176,7 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 			folderBlock := &structures.FolderBlock{}
 			err := folderBlock.Deserialize(diskPath, int64(superblock.S_block_start+(blockIndex*superblock.S_block_size)))
 			if err != nil {
+				delete(processingNodes, inodeIndex) // Limpiar el estado de procesamiento
 				return nil, err
 			}
 
@@ -158,8 +186,9 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 					continue
 				}
 
-				childNode, err := generateNodeContent(superblock, diskPath, content.B_inodo, nodesCache)
+				childNode, err := generateNodeContent(superblock, diskPath, content.B_inodo, nodesCache, processingNodes)
 				if err != nil {
+					delete(processingNodes, inodeIndex) // Limpiar el estado de procesamiento
 					return nil, err
 				}
 
@@ -173,6 +202,7 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 			fileBlock := &structures.FileBlock{}
 			err := fileBlock.Deserialize(diskPath, int64(superblock.S_block_start+(blockIndex*superblock.S_block_size)))
 			if err != nil {
+				delete(processingNodes, inodeIndex) // Limpiar el estado de procesamiento
 				return nil, err
 			}
 
@@ -183,5 +213,65 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 		}
 	}
 
+	// Ya no estamos procesando este inodo
+	delete(processingNodes, inodeIndex)
+
+	// Guardar el nodo completo en el caché
+	nodesCache[inodeIndex] = node
+
+	// Reemplazar los marcadores temporales de este inodo en el árbol si existen
+	updateTemporaryMarkers(node, nodesCache)
+
 	return node, nil
+}
+
+// Función auxiliar para actualizar los marcadores temporales
+func updateTemporaryMarkers(completeNode *FileSystemNodeWithRef, nodesCache map[int32]*FileSystemNodeWithRef) {
+	for _, nodePtr := range nodesCache {
+		// Si es un directorio, buscar en su contenido los marcadores temporales
+		if nodePtr.Type == 1 && nodePtr.Content != nil {
+			for i := range nodePtr.Content {
+				// Convertir el elemento de la interfaz a FileSystemNodeWithRef
+				if contentNode, ok := nodePtr.Content[i].(FileSystemNodeWithRef); ok {
+					// Si es un marcador temporal para el inodo que acabamos de completar
+					if contentNode.Type == -1 && contentNode.InodeRef == completeNode.InodeRef {
+						// Reemplazar con una referencia completa
+						nodePtr.Content[i] = FileSystemNodeWithRef{
+							Name:       contentNode.Name, // Mantener el nombre asignado
+							Type:       completeNode.Type,
+							InodeRef:   completeNode.InodeRef,
+							IsRef:      true,
+							RefContent: completeNode.Content,
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// Función para obtener un clon del contenido de un nodo
+func cloneContent(content []interface{}) []interface{} {
+	if content == nil {
+		return nil
+	}
+
+	result := make([]interface{}, len(content))
+	for i, item := range content {
+		switch v := item.(type) {
+		case FileSystemNodeWithRef:
+			// Clonar el nodo
+			nodeCopy := v
+			// Si el nodo tiene contenido, clonarlo recursivamente
+			if v.Content != nil {
+				nodeCopy.Content = cloneContent(v.Content)
+			}
+			result[i] = nodeCopy
+		default:
+			// Para otros tipos (como strings), copiar directamente
+			result[i] = v
+		}
+	}
+
+	return result
 }
