@@ -9,10 +9,12 @@ import (
 	"strings"
 )
 
-type FileSystemNode struct {
-	Name    string        `json:"name"`
-	Type    int           `json:"type"`
-	Content []interface{} `json:"content,omitempty"`
+type FileSystemNodeWithRef struct {
+	Name     string        `json:"name"`
+	Type     int           `json:"type"`
+	Content  []interface{} `json:"content,omitempty"`
+	InodeRef int32         `json:"inodeRef"`
+	IsRef    bool          `json:"isRef,omitempty"`
 }
 
 func ParseGetfs(tokens []string) (string, error) {
@@ -89,12 +91,15 @@ func getPartitionsInfo(mbr *structures.MBR, sb *structures.SuperBlock, diskPath 
 	return partitions
 }
 
-func getFileSystemStructure(sb *structures.SuperBlock, diskPath string) *FileSystemNode {
+func getFileSystemStructure(sb *structures.SuperBlock, diskPath string) *FileSystemNodeWithRef {
 	if sb == nil {
 		return nil
 	}
 
-	rootNode, err := generateNodeContent(sb, diskPath, 0, make(map[int32]bool))
+	// Creamos un mapa para almacenar los nodos ya generados
+	nodesCache := make(map[int32]*FileSystemNodeWithRef)
+
+	rootNode, err := generateNodeContent(sb, diskPath, 0, nodesCache)
 	if err != nil {
 		return nil
 	}
@@ -102,11 +107,17 @@ func getFileSystemStructure(sb *structures.SuperBlock, diskPath string) *FileSys
 	return rootNode
 }
 
-func generateNodeContent(superblock *structures.SuperBlock, diskPath string, inodeIndex int32, visited map[int32]bool) (*FileSystemNode, error) {
-	if visited[inodeIndex] {
-		return nil, nil
+func generateNodeContent(superblock *structures.SuperBlock, diskPath string, inodeIndex int32, nodesCache map[int32]*FileSystemNodeWithRef) (*FileSystemNodeWithRef, error) {
+	// Verificar si este inodo ya fue procesado
+	if node, exists := nodesCache[inodeIndex]; exists {
+		// Crear una referencia al nodo ya existente
+		return &FileSystemNodeWithRef{
+			Name:     node.Name,
+			Type:     node.Type,
+			InodeRef: inodeIndex,
+			IsRef:    true,
+		}, nil
 	}
-	visited[inodeIndex] = true
 
 	inode := &structures.Inode{}
 	err := inode.Deserialize(diskPath, int64(superblock.S_inode_start+(inodeIndex*superblock.S_inode_size)))
@@ -114,10 +125,15 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 		return nil, err
 	}
 
-	node := &FileSystemNode{
-		Name: "/",
-		Type: 0,
+	// Crear un nuevo nodo
+	node := &FileSystemNodeWithRef{
+		Name:     "/",
+		Type:     0,
+		InodeRef: inodeIndex,
 	}
+
+	// Agregar el nodo al cache antes de procesar su contenido para manejar referencias circulares
+	nodesCache[inodeIndex] = node
 
 	if inode.I_type[0] == '1' {
 		node.Type = 1
@@ -129,7 +145,7 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 			break
 		}
 
-		if inode.I_type[0] == '0' {
+		if inode.I_type[0] == '0' { // Directorio
 			folderBlock := &structures.FolderBlock{}
 			err := folderBlock.Deserialize(diskPath, int64(superblock.S_block_start+(blockIndex*superblock.S_block_size)))
 			if err != nil {
@@ -142,7 +158,7 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 					continue
 				}
 
-				childNode, err := generateNodeContent(superblock, diskPath, content.B_inodo, visited)
+				childNode, err := generateNodeContent(superblock, diskPath, content.B_inodo, nodesCache)
 				if err != nil {
 					return nil, err
 				}
@@ -153,7 +169,7 @@ func generateNodeContent(superblock *structures.SuperBlock, diskPath string, ino
 				}
 			}
 
-		} else if inode.I_type[0] == '1' {
+		} else if inode.I_type[0] == '1' { // Archivo
 			fileBlock := &structures.FileBlock{}
 			err := fileBlock.Deserialize(diskPath, int64(superblock.S_block_start+(blockIndex*superblock.S_block_size)))
 			if err != nil {

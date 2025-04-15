@@ -298,3 +298,7 @@ func (sb *SuperBlock) EditFile(path string, parentsDir []string, destDir string,
 func (sb *SuperBlock) RenameFile(path string, parentsDir []string, destDir string, name string, uid int32, gid int32) error {
 	return sb.RenameFileInInode(path, 0, parentsDir, destDir, name, uid, gid)
 }
+
+func (sb *SuperBlock) CopyFile(path string, parentsDir []string, destDir string, destinoParentDirs []string, destinoDir string, uid int32, gid int32) error {
+	return sb.CopyFileInInode(path, 0, parentsDir, destDir, destinoParentDirs, destinoDir, uid, gid)
+}

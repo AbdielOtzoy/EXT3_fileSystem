@@ -347,3 +347,271 @@ func (sb *SuperBlock) RenameFileInInode(path string, inodeIndex int32, parentsDi
 
 	return fmt.Errorf("no se encontró el archivo")
 }
+
+// CopyFile copia todo el contenido de un archivo o carpeta
+func (sb *SuperBlock) CopyFileInInode(path string, inodeIndex int32, parentsDir []string, destDir string, destinoParentDirs []string, destinoDir string, uid int32, gid int32) error {
+	// Crear un nuevo inodo
+	fmt.Println("Inodo: ", inodeIndex)
+	fmt.Println("Nombre: ", destDir)
+	fmt.Println("ParentsDir: ", parentsDir)
+	fmt.Println("destDir: ", destDir)
+	inode := &Inode{}
+	// Deserializar el inodo
+	err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+	if err != nil {
+		return err
+	}
+	// Verificar si el inodo es de tipo carpeta
+	if inode.I_type[0] == '1' {
+		return fmt.Errorf("el inodo %d es de tipo carpeta", inodeIndex)
+	}
+
+	// Iterar sobre cada bloque del inodo (apuntadores)
+	for _, blockIndex := range inode.I_block {
+		if blockIndex == -1 {
+			break
+		}
+
+		block := &FolderBlock{}
+
+		// Deserializar el bloque
+		err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size))) // 64 porque es el tamaño de un bloque
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Bloque: ", blockIndex)
+		block.Print()
+
+		// Iterar sobre cada contenido del bloque, desde el index 2 porque los primeros dos son . y ..
+		for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
+			// Obtener el contenido del bloque
+			content := block.B_content[indexContent]
+
+			if len(parentsDir) != 0 {
+				if content.B_inodo == -1 {
+					break
+				}
+
+				parentDir, err := utils.First(parentsDir)
+				if err != nil {
+					return err
+				}
+
+				// Convertir B_name a string y eliminar los caracteres nulos
+				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+				// Convertir parentDir a string y eliminar los caracteres nulos
+				parentDirName := strings.Trim(parentDir, "\x00 ")
+
+				// Si el nombre del contenido coincide con el nombre de la carpeta padre
+				if strings.EqualFold(contentName, parentDirName) {
+					fmt.Println("entrando a la carpeta padre")
+					err := sb.CopyFileInInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, destinoParentDirs, destinoDir, uid, gid)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			} else {
+				if content.B_inodo == -1 {
+					continue
+				}
+				destDirByte := [12]byte{}
+				copy(destDirByte[:], destDir)
+
+				if content.B_name == destDirByte {
+					fmt.Println("---------LA ENCONTRÉ-------")
+					fmt.Println("Inodo: ", content.B_inodo)
+					fmt.Println("Nombre: ", string(content.B_name[:]))
+					fmt.Println("destinoParentDirs: ", destinoParentDirs)
+					fmt.Println("destinoDir: ", destinoDir)
+
+					err := sb.copyContentTo(path, 0, content.B_inodo, string(content.B_name[:]), destinoParentDirs, destinoDir)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			}
+		}
+	}
+
+	return fmt.Errorf("no se encontró el archivo")
+}
+
+// copyContentTo copia el contenido de un archivo o carpeta
+func (sb *SuperBlock) copyContentTo(path string, inodeIndex int32, inodeNumber int32, name string, parentsDir []string, destDir string) error {
+	// Crear un nuevo inodo
+	fmt.Println("Inodo: ", inodeIndex)
+	fmt.Println("Nombre: ", name)
+	fmt.Println("destinoParentDirs: ", parentsDir)
+	fmt.Println("destinoDir: ", destDir)
+	inode := &Inode{}
+	// Deserializar el inodo
+	err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+	if err != nil {
+		return err
+	}
+	// Verificar si el inodo es de tipo carpeta
+	if inode.I_type[0] == '1' {
+		return fmt.Errorf("el inodo %d no es de tipo carpeta", inodeIndex)
+	}
+
+	// Iterar sobre cada bloque del inodo (apuntadores)
+	for i, blockIndex := range inode.I_block {
+		if blockIndex == -1 {
+			fmt.Println("Ya no hay más bloques, creando uno nuevo")
+			fmt.Println("i:", i)
+
+			// 1. Crear y serializar el nuevo bloque de carpeta
+			newBlock := &FolderBlock{
+				B_content: [4]FolderContent{
+					{B_name: [12]byte{'.'}, B_inodo: inodeIndex},
+					{B_name: [12]byte{'.', '.'}, B_inodo: inodeIndex},
+					{B_name: [12]byte{'-'}, B_inodo: -1},
+					{B_name: [12]byte{'-'}, B_inodo: -1},
+				},
+			}
+
+			destDirByte := [12]byte{}
+			copy(destDirByte[:], name)
+			newBlock.B_content[2] = FolderContent{B_name: destDirByte, B_inodo: inodeNumber}
+
+			// Serializar el nuevo bloque
+			err := newBlock.Serialize(path, int64(sb.S_block_start+(sb.S_blocks_count*sb.S_block_size)))
+			if err != nil {
+				return err
+			}
+
+			// Actualizar el bitmap de bloques
+			err = sb.UpdateBitmapBlock(path)
+			if err != nil {
+				return err
+			}
+
+			inode.I_block[i] = sb.S_blocks_count
+
+			// Serializar el inodo actualizado
+			err = inode.Serialize(path, int64(sb.S_inode_start+(inodeIndex*sb.S_inode_size)))
+			if err != nil {
+				return err
+			}
+
+			// Actualizar el superbloque
+			sb.S_blocks_count++
+			sb.S_free_blocks_count--
+			sb.S_first_blo += sb.S_block_size
+
+			return nil
+		}
+
+		block := &FolderBlock{}
+
+		// Deserializar el bloque
+		err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size))) // 64 porque es el tamaño de un bloque
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Bloque: ", blockIndex)
+		block.Print()
+
+		// Iterar sobre cada contenido del bloque, desde el index 2 porque los primeros dos son . y ..
+		for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
+			content := block.B_content[indexContent]
+			fmt.Println("Contenido: ", indexContent)
+			fmt.Println("len parentsDir: ", len(parentsDir))
+
+			if len(parentsDir) != 0 {
+				if content.B_inodo == -1 {
+					break
+				}
+
+				parentDir, err := utils.First(parentsDir)
+				if err != nil {
+					return err
+				}
+
+				// Convertir B_name a string y eliminar los caracteres nulos
+				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+				// Convertir parentDir a string y eliminar los caracteres nulos
+				parentDirName := strings.Trim(parentDir, "\x00 ")
+				fmt.Println("Nombre del contenido: ", contentName)
+				fmt.Println("Nombre de la carpeta padre: ", parentDirName)
+
+				// Si el nombre del contenido coincide con el nombre de la carpeta padre
+				if strings.EqualFold(contentName, parentDirName) {
+					fmt.Println("entrando a la carpeta padre")
+					err := sb.copyContentTo(path, content.B_inodo, inodeNumber, name, utils.RemoveElement(parentsDir, 0), destDir)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			} else {
+				fmt.Println("content.B_inodo: ", content.B_inodo)
+				if content.B_inodo == -1 {
+					continue
+				}
+				destDirByte := [12]byte{}
+				copy(destDirByte[:], destDir)
+				fmt.Println("Nombre del contenido: ", string(content.B_name[:]))
+				fmt.Println("Nombre de la carpeta: ", string(destDirByte[:]))
+
+				if content.B_name == destDirByte {
+					fmt.Println("Copiando en el inodo")
+					// obtener el inodo de content.B_inodo
+					folderInode := &Inode{}
+					err := folderInode.Deserialize(path, int64(sb.S_inode_start+(content.B_inodo*sb.S_inode_size)))
+					if err != nil {
+						return err
+					}
+
+					// iterar sobre cada bloque del inodo (apuntadores)
+					for _, blockIndex := range folderInode.I_block {
+						if blockIndex == -1 {
+							// TODO: crear un nuevo bloque
+							fmt.Println("No hay más bloques, creando uno nuevo")
+							break
+						}
+						blockInode := &FolderBlock{}
+						err := blockInode.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size)))
+						if err != nil {
+							return err
+						}
+
+						// iterar sobre cada contenido del bloque, desde el index 2 porque los primeros dos son . y ..
+						for indexContentInode := 2; indexContentInode < len(blockInode.B_content); indexContentInode++ {
+							contentBlock := blockInode.B_content[indexContentInode]
+
+							if contentBlock.B_inodo == -1 {
+								// insertar el nuevo contenido
+								nameBytes := [12]byte{}
+								copy(nameBytes[:], name)
+								blockInode.B_content[indexContentInode] = FolderContent{B_name: nameBytes, B_inodo: inodeNumber}
+
+								// serializar el bloque
+								err := blockInode.Serialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size)))
+								if err != nil {
+									return err
+								}
+
+								// serializar el inodo
+								err = folderInode.Serialize(path, int64(sb.S_inode_start+(content.B_inodo*sb.S_inode_size)))
+								if err != nil {
+									return err
+								}
+
+								return nil
+							}
+
+						}
+					}
+					return nil
+				}
+			}
+		}
+	}
+
+	return fmt.Errorf("no se encontró el archivo")
+}
