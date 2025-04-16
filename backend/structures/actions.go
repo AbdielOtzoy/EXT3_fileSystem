@@ -705,3 +705,257 @@ func (sb *SuperBlock) MoveFileInInode(path string, inodeIndex int32, parentsDir 
 
 	return fmt.Errorf("no se encontró el archivo")
 }
+
+func (sb *SuperBlock) ChownInInode(path string, inodeNumber int32, parentsDir []string, destDir string, uid int32, gid int32) error {
+	inode := &Inode{}
+	// Deserializar el inodo
+	err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeNumber*sb.S_inode_size)))
+	if err != nil {
+		return fmt.Errorf("error al deserializar el inodo: %w", err)
+	}
+
+	if inode.I_type[0] == '1' {
+		return fmt.Errorf("el inodo %d es de tipo carpeta", inodeNumber)
+	}
+
+	for _, blockIndex := range inode.I_block {
+		if blockIndex == -1 {
+			break
+		}
+		// Crear un nuevo bloque de carpeta
+		block := &FolderBlock{}
+
+		// Deserializar el bloque
+		err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size))) // 64 porque es el tamaño de un bloque
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Bloque: ", blockIndex)
+		block.Print()
+
+		for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
+			content := block.B_content[indexContent]
+
+			if len(parentsDir) != 0 {
+				if content.B_inodo == -1 {
+					break
+				}
+
+				parentDir, err := utils.First(parentsDir)
+				if err != nil {
+					return err
+				}
+
+				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+				// Convertir parentDir a string y eliminar los caracteres nulos
+				parentDirName := strings.Trim(parentDir, "\x00 ")
+
+				if strings.EqualFold(contentName, parentDirName) {
+					fmt.Println("entrando a la carpeta padre")
+					err := sb.ChownInInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, uid, gid)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			} else {
+				fmt.Println("ya no hay más carpetas padre")
+				if content.B_inodo == -1 {
+					continue
+				}
+
+				destDirByte := [12]byte{}
+				copy(destDirByte[:], destDir)
+
+				if content.B_name == destDirByte {
+					fmt.Println("---------LA ENCONTRÉ-------")
+					// Si son las mismas, entonces entramos al inodo que apunta el bloque
+					inodeFound := &Inode{}
+					err := inodeFound.Deserialize(path, int64(sb.S_inode_start+(content.B_inodo*sb.S_inode_size)))
+					if err != nil {
+						return err
+					}
+
+					// cambiar el uid y el gid
+					inodeFound.I_uid = uid
+					inodeFound.I_gid = gid
+
+					// Serializar el inodo
+					err = inodeFound.Serialize(path, int64(sb.S_inode_start+(content.B_inodo*sb.S_inode_size)))
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			}
+		}
+
+	}
+	return nil
+}
+
+func (sb *SuperBlock) ChmodInInode(path string, inodeNumber int32, parentsDir []string, destDir string, ugo string, uid int32, gid int32) error {
+	inode := &Inode{}
+	// Deserializar el inodo
+	err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeNumber*sb.S_inode_size)))
+	if err != nil {
+		return fmt.Errorf("error al deserializar el inodo: %w", err)
+	}
+
+	if inode.I_type[0] == '1' {
+		return fmt.Errorf("el inodo %d es de tipo carpeta", inodeNumber)
+	}
+
+	for _, blockIndex := range inode.I_block {
+		if blockIndex == -1 {
+			break
+		}
+		// Crear un nuevo bloque de carpeta
+		block := &FolderBlock{}
+
+		// Deserializar el bloque
+		err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size))) // 64 porque es el tamaño de un bloque
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Bloque: ", blockIndex)
+		block.Print()
+
+		for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
+			content := block.B_content[indexContent]
+
+			if len(parentsDir) != 0 {
+				if content.B_inodo == -1 {
+					break
+				}
+
+				parentDir, err := utils.First(parentsDir)
+				if err != nil {
+					return err
+				}
+
+				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+				// Convertir parentDir a string y eliminar los caracteres nulos
+				parentDirName := strings.Trim(parentDir, "\x00 ")
+
+				if strings.EqualFold(contentName, parentDirName) {
+					fmt.Println("entrando a la carpeta padre")
+					err := sb.ChmodInInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, ugo, uid, gid)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			} else {
+				fmt.Println("ya no hay más carpetas padre")
+				if content.B_inodo == -1 {
+					continue
+				}
+
+				destDirByte := [12]byte{}
+				copy(destDirByte[:], destDir)
+
+				if content.B_name == destDirByte {
+					fmt.Println("---------LA ENCONTRÉ-------")
+					// Si son las mismas, entonces entramos al inodo que apunta el bloque
+					inodeFound := &Inode{}
+					err := inodeFound.Deserialize(path, int64(sb.S_inode_start+(content.B_inodo*sb.S_inode_size)))
+					if err != nil {
+						return err
+					}
+
+					permisosByte := [3]byte{}
+					copy(permisosByte[:], ugo)
+
+					// cambiar los permisos
+					inodeFound.I_perm = permisosByte
+
+					// Serializar el inodo
+					err = inodeFound.Serialize(path, int64(sb.S_inode_start+(content.B_inodo*sb.S_inode_size)))
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			}
+		}
+
+	}
+	return nil
+}
+
+func (sb *SuperBlock) FindInInode(path string, inodeNumber int32, parentsDir []string, destDir string, name string) error {
+	inode := &Inode{}
+	// Deserializar el inodo
+	err := inode.Deserialize(path, int64(sb.S_inode_start+(inodeNumber*sb.S_inode_size)))
+	if err != nil {
+		return fmt.Errorf("error al deserializar el inodo: %w", err)
+	}
+
+	if inode.I_type[0] == '1' {
+		return fmt.Errorf("el inodo %d es de tipo carpeta", inodeNumber)
+	}
+
+	for _, blockIndex := range inode.I_block {
+		if blockIndex == -1 {
+			break
+		}
+		// Crear un nuevo bloque de carpeta
+		block := &FolderBlock{}
+
+		// Deserializar el bloque
+		err := block.Deserialize(path, int64(sb.S_block_start+(blockIndex*sb.S_block_size))) // 64 porque es el tamaño de un bloque
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Bloque: ", blockIndex)
+		block.Print()
+
+		for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
+			content := block.B_content[indexContent]
+
+			if len(parentsDir) != 0 {
+				if content.B_inodo == -1 {
+					break
+				}
+
+				parentDir, err := utils.First(parentsDir)
+				if err != nil {
+					return err
+				}
+
+				contentName := strings.Trim(string(content.B_name[:]), "\x00 ")
+				// Convertir parentDir a string y eliminar los caracteres nulos
+				parentDirName := strings.Trim(parentDir, "\x00 ")
+
+				if strings.EqualFold(contentName, parentDirName) {
+					fmt.Println("entrando a la carpeta padre")
+					err := sb.FindInInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, name)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+			} else {
+				fmt.Println("ya no hay más carpetas padre")
+				if content.B_inodo == -1 {
+					continue
+				}
+
+				destDirByte := [12]byte{}
+				copy(destDirByte[:], destDir)
+
+				if content.B_name == destDirByte {
+					fmt.Println("---------LA ENCONTRÉ-------")
+					// TODO: implementar
+					return nil
+				}
+			}
+		}
+
+	}
+	return nil
+}

@@ -689,3 +689,86 @@ func (sb *SuperBlock) setUsersContent(path string, content string) error {
 
 	return nil
 }
+
+// función para obtener el uid y gid de un usuario por el nombre
+func (sb *SuperBlock) GetUidGidByNameInInode(name string, path string) (int32, int32, error) {
+	// obtener el contenido del bloque
+	content := sb.getUsersContent(path)
+
+	fmt.Println("Tamaño del bloque: ", len(content))
+
+	var contentEndPos int
+	// encontrar donde termina realmente el contenido (primer byte nulo o fin del array)
+	for i, b := range content {
+		if b == 0 {
+			contentEndPos = i
+			break
+		}
+	}
+
+	// si no hay bytes nulos, usar todo el array
+	if contentEndPos == 0 {
+		contentEndPos = len(content)
+	}
+
+	// obtener solo el contenido real (sin bytes nulos)
+	content = string(content[:contentEndPos])
+	fmt.Println("Tamaño del contenido real: ", len(content))
+	// eliminar los caracteres nulos
+
+	// separar el contenido por lineas
+	lines := strings.Split(content, "\n")
+	// eliminar la ultima linea si es vacia
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+
+	fmt.Println("Contenido login: ", content)
+
+	uid := int32(0)
+	gid := int32(0)
+	grupoUsuario := ""
+	// iterar sobre cada linea
+	for _, line := range lines {
+		// separar la linea por comas
+		parts := strings.Split(line, ",")
+
+		/*
+			formato del archivo:
+			GID, Tipo, Grupo \n
+			UID, Tipo, Grupo, Usuario, Contraseña \n
+		*/
+
+		fmt.Println("Partes: ", parts)
+
+		// verificar si es un usuario
+		if parts[1] == "U" {
+			fmt.Println("Usuario: ", parts[3])
+			fmt.Println("Contraseña: ", parts[4])
+			if parts[3] == name {
+				fmt.Println("Usuario: ", parts[3])
+				fmt.Println("Contraseña: ", parts[4])
+				uid = utils.StringToInt32(parts[0])
+				grupoUsuario = parts[2]
+			}
+		}
+	}
+
+	// iterar para buscar el grupo
+	for _, line := range lines {
+		// separar la linea por comas
+		parts := strings.Split(line, ",")
+		// verificar si es un grupo
+		if parts[1] == "G" {
+			fmt.Println("Grupo: ", parts[2])
+			if parts[2] == grupoUsuario {
+				fmt.Println("Grupo: ", parts[2])
+				gid = utils.StringToInt32(parts[0])
+				fmt.Println("GID: ", gid)
+				return uid, gid, nil
+			}
+		}
+	}
+
+	return 0, 0, fmt.Errorf("usuario o contraseña incorrectos")
+}

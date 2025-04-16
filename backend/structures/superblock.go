@@ -306,3 +306,24 @@ func (sb *SuperBlock) CopyFile(path string, parentsDir []string, destDir string,
 func (sb *SuperBlock) MoveFile(path string, parentsDir []string, destDir string, destinoParentDirs []string, destinoDir string, uid int32, gid int32) error {
 	return sb.MoveFileInInode(path, 0, parentsDir, destDir, destinoParentDirs, destinoDir, uid, gid)
 }
+
+func (sb *SuperBlock) GetUidGidByName(name, path string) (int32, int32, error) {
+	uid, gid, err := sb.GetUidGidByNameInInode(name, path)
+	if err != nil {
+		return -1, -1, err
+	}
+
+	return uid, gid, nil
+}
+
+func (sb *SuperBlock) Chown(path string, parentsDir []string, destDir string, uid int32, gid int32) error {
+	return sb.ChownInInode(path, 0, parentsDir, destDir, uid, gid)
+}
+
+func (sb *SuperBlock) Chmod(path string, parentsDir []string, destDir string, ugo string, uid int32, gid int32) error {
+	return sb.ChmodInInode(path, 0, parentsDir, destDir, ugo, uid, gid)
+}
+
+func (sb *SuperBlock) Find(path string, parentsDir []string, destDir string, name string) ([]string, error) {
+	return sb.FindInInode(path, 0, parentsDir, destDir, name)
+}
