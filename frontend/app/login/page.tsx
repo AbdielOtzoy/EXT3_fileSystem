@@ -2,6 +2,7 @@
 
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import Link from 'next/link';
 import React, { useState } from 'react';
 
 const LoginPage = () => {
@@ -101,6 +102,9 @@ const LoginPage = () => {
             >
               Sign in
             </button>
+          </div>
+          <div>
+            <Link href="/">Regresar el Inicio</Link>
           </div>
         </form>
       </div>

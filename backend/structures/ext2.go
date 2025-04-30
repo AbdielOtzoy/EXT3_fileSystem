@@ -157,7 +157,7 @@ func (sb *SuperBlock) CreateUsersFileExt2(path string) error {
 	return nil
 }
 
-func (sb *SuperBlock) createFileInodeExt2(path string, inodeIndex int32, parentsDir []string, destDir string, r bool, size int, contentFile string, uid int32, gid int32) error {
+func (sb *SuperBlock) createFileInodeExt2(path string, inodeIndex int32, parentsDir []string, destDir string, r bool, size int, contentFile string, uid int32, gid int32, folderPath string, journalStart int64) error {
 	// crear un nuevo inodo
 	inode := &Inode{}
 	// deserializar el inodo
@@ -234,6 +234,32 @@ func (sb *SuperBlock) createFileInodeExt2(path string, inodeIndex int32, parents
 				}
 			}
 			fmt.Println("Contenido del archivo: ", content)
+
+			if sb.S_filesystem_type == 3 {
+				// Jornaling
+				// Crear el journal
+				bytePath := [32]byte{}
+				copy(bytePath[:], folderPath)
+				byteContent := [64]byte{}
+				copy(byteContent[:], content)
+				journal := &Journal{
+					J_count: sb.S_inodes_count,
+					J_content: Information{
+						I_operation: [10]byte{'m', 'k', 'f', 'i', 'l', 'e'},
+						I_path:      bytePath,
+						I_content:   byteContent,
+						I_date:      float32(time.Now().Unix()),
+					},
+				}
+				fmt.Println("Journal:")
+				journal.Print()
+
+				// Serializar el journal
+				err = journal.Serialize(path, journalStart)
+				if err != nil {
+					return err
+				}
+			}
 
 			// crear un arreglo de bloques que almacene el contenido de 64 bytes
 			contentBlocks := make([]string, 0)
@@ -357,7 +383,7 @@ func (sb *SuperBlock) createFileInodeExt2(path string, inodeIndex int32, parents
 				parentDirName := strings.Trim(parentDir, "\x00 ")
 				// Si el nombre del contenido coincide con el nombre de la carpeta padre
 				if strings.EqualFold(contentName, parentDirName) {
-					err := sb.createFileInodeExt2(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, r, size, contentFile, uid, gid)
+					err := sb.createFileInodeExt2(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, r, size, contentFile, uid, gid, folderPath, journalStart)
 					if err != nil {
 						return err
 					}
@@ -405,6 +431,32 @@ func (sb *SuperBlock) createFileInodeExt2(path string, inodeIndex int32, parents
 					}
 				}
 				fmt.Println("Contenido del archivo: ", content)
+
+				if sb.S_filesystem_type == 3 {
+					// Jornaling
+					// Crear el journal
+					bytePath := [32]byte{}
+					copy(bytePath[:], folderPath)
+					byteContent := [64]byte{}
+					copy(byteContent[:], content)
+					journal := &Journal{
+						J_count: sb.S_inodes_count,
+						J_content: Information{
+							I_operation: [10]byte{'m', 'k', 'f', 'i', 'l', 'e'},
+							I_path:      bytePath,
+							I_content:   byteContent,
+							I_date:      float32(time.Now().Unix()),
+						},
+					}
+					fmt.Println("Journal:")
+					journal.Print()
+
+					// Serializar el journal
+					err = journal.Serialize(path, journalStart)
+					if err != nil {
+						return err
+					}
+				}
 
 				// crear un arreglo de bloques que almacene el contenido de 64 bytes
 				contentBlocks := make([]string, 0)

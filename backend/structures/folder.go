@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// createFolderInInodeExt2 crea una carpeta en un inodo específico
-func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, parentsDir []string, destDir string, uid int32, gid int32) error {
+// createFolderInode crea una carpeta en un inodo específico
+func (sb *SuperBlock) createFolderInode(path string, inodeIndex int32, parentsDir []string, destDir string, uid int32, gid int32, folderPath string, journalStart int64) error {
 	// Crear un nuevo inodo
 	inode := &Inode{}
 	// Deserializar el inodo
@@ -16,8 +16,6 @@ func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, par
 	if err != nil {
 		return err
 	}
-	fmt.Println("Inodo deserializado correctamente")
-	inode.Print()
 	// Verificar si el inodo es de tipo carpeta
 	if inode.I_type[0] == '1' {
 		return nil
@@ -69,6 +67,29 @@ func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, par
 				sb.S_blocks_count++
 				sb.S_free_blocks_count--
 				sb.S_first_blo += sb.S_block_size
+
+				if sb.S_filesystem_type == 3 {
+					// Jornaling
+					// Crear el journal
+					bytePath := [32]byte{}
+					copy(bytePath[:], folderPath)
+					journal := &Journal{
+						J_count: sb.S_inodes_count,
+						J_content: Information{
+							I_operation: [10]byte{'m', 'k', 'd', 'i', 'r'},
+							I_path:      bytePath,
+							I_content:   [64]byte{},
+							I_date:      float32(time.Now().Unix()),
+						},
+					}
+					fmt.Println("Journal:")
+					journal.Print()
+					// Serializar el journal
+					err = journal.Serialize(path, journalStart)
+					if err != nil {
+						return err
+					}
+				}
 
 				// 2. Crear el inodo de la nueva carpeta
 				folderInode := &Inode{
@@ -193,8 +214,6 @@ func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, par
 		if err != nil {
 			return err
 		}
-		fmt.Println("Bloque deserializado correctamente", blockIndex)
-		block.Print()
 
 		// Iterar sobre cada contenido del bloque, desde el index 2 porque los primeros dos son . y ..
 		for indexContent := 2; indexContent < len(block.B_content); indexContent++ {
@@ -224,7 +243,7 @@ func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, par
 				if strings.EqualFold(contentName, parentDirName) {
 					//fmt.Println("---------LA ENCONTRÉ-------")
 					// Si son las mismas, entonces entramos al inodo que apunta el bloque
-					err := sb.createFolderInInodeExt2(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, uid, gid)
+					err := sb.createFolderInode(path, content.B_inodo, utils.RemoveElement(parentsDir, 0), destDir, uid, gid, folderPath, journalStart)
 					if err != nil {
 						return err
 					}
@@ -232,11 +251,6 @@ func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, par
 				}
 			} else {
 				fmt.Println("---------ESTOY  CREANDO--------")
-				fmt.Println("blockIndex: ", blockIndex)
-				fmt.Println("indexContent: ", indexContent)
-				fmt.Println("content: ", content.B_inodo)
-				fmt.Println(content.B_inodo != -1 && indexContent == 3)
-				fmt.Println("i:", i)
 
 				// Si el apuntador al inodo está ocupado, continuar con el siguiente
 				if content.B_inodo != -1 {
@@ -274,8 +288,6 @@ func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, par
 
 									// Actualizar el bloque
 									folderBlock.B_content[indexContentpb] = contentpb
-									fmt.Println("Actualizando el bloque de la carpeta")
-									folderBlock.Print()
 									// Serializar el bloque
 									err = folderBlock.Serialize(path, int64(sb.S_block_start+(pointerBlock.P_pointers[j]*sb.S_block_size)))
 									if err != nil {
@@ -454,7 +466,31 @@ func (sb *SuperBlock) createFolderInInodeExt2(path string, inodeIndex int32, par
 				if err != nil {
 					return err
 				}
+				fmt.Println("Tipoe de sistema de archivos:", sb.S_filesystem_type)
+				fmt.Println(sb.S_filesystem_type == 3)
+				if sb.S_filesystem_type == 3 {
+					// Jornaling
+					// Crear el journal
+					bytePath := [32]byte{}
+					copy(bytePath[:], folderPath)
+					journal := &Journal{
+						J_count: sb.S_inodes_count,
+						J_content: Information{
+							I_operation: [10]byte{'m', 'k', 'd', 'i', 'r'},
+							I_path:      bytePath,
+							I_content:   [64]byte{},
+							I_date:      float32(time.Now().Unix()),
+						},
+					}
+					fmt.Println("Journal:")
+					journal.Print()
 
+					// Serializar el journal
+					err = journal.Serialize(path, journalStart)
+					if err != nil {
+						return err
+					}
+				}
 				// Crear el inodo de la carpeta
 				folderInode := &Inode{
 					I_uid:   uid,

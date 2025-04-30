@@ -193,15 +193,15 @@ func (sb *SuperBlock) PrintBlocks(path string) error {
 }
 
 // CreateFolder crea una carpeta en el sistema de archivos
-func (sb *SuperBlock) CreateFolder(path string, parentsDir []string, destDir string, uid int32, gid int32) error {
-	return sb.createFolderInInodeExt2(path, 0, parentsDir, destDir, uid, gid)
+func (sb *SuperBlock) CreateFolder(path string, parentsDir []string, destDir string, uid int32, gid int32, folderPath string, journalStart int64) error {
+	return sb.createFolderInode(path, 0, parentsDir, destDir, uid, gid, folderPath, journalStart)
 
 }
 
 // CreateFile crea un archivo en el sistema de archivos
-func (sb *SuperBlock) CreateFile(path string, parentsDir []string, destDir string, r bool, size int, content string, uid int32, gid int32) error {
+func (sb *SuperBlock) CreateFile(path string, parentsDir []string, destDir string, r bool, size int, content string, uid int32, gid int32, folderPath string, journalStart int64) error {
 	fmt.Println("Creando archivo:", path, "contenido:", content)
-	return sb.createFileInodeExt2(path, 0, parentsDir, destDir, r, size, content, uid, gid)
+	return sb.createFileInodeExt2(path, 0, parentsDir, destDir, r, size, content, uid, gid, folderPath, journalStart)
 }
 
 func (sb *SuperBlock) ExistsFolcer(path string, parentsDir []string, destDir string) (bool, error) {
@@ -325,5 +325,10 @@ func (sb *SuperBlock) Chmod(path string, parentsDir []string, destDir string, ug
 }
 
 func (sb *SuperBlock) Find(path string, parentsDir []string, destDir string, name string) ([]string, error) {
-	return sb.FindInInode(path, 0, parentsDir, destDir, name)
+	err := sb.FindInInode(path, 0, parentsDir, destDir, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }

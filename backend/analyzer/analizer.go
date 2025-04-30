@@ -71,7 +71,14 @@ func Analyzer(input string) (string, error) {
 	case "chmod":
 		return commands.ParseCHMOD(tokens[1:])
 	case "find":
-		return commands.ParseFind(tokens[1:])
+		return commands.ParseFIND(tokens[1:])
+	case "journaling":
+		return commands.ParseJournal(tokens[1:])
+	case "loss":
+		return commands.ParseLoss(tokens[1:])
+	case "recovery":
+		return commands.ParseRecovery(tokens[1:])
+
 	default:
 		return "", fmt.Errorf("comando desconocido: %s", tokens[0])
 	}

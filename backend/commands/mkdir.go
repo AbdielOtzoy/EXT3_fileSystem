@@ -4,6 +4,7 @@ import (
 	stores "backend/stores"
 	structures "backend/structures"
 	utils "backend/utils"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"regexp"
@@ -11,8 +12,8 @@ import (
 )
 
 type MKDIR struct {
-	path string 
-	p    bool  
+	path string
+	p    bool
 }
 
 /*
@@ -113,7 +114,7 @@ func createDirectory(dirPath string, p bool, sb *structures.SuperBlock, partitio
 				continue
 			}
 
-			fmt.Printf("la carpeta no exisxte, creandola: %s\n", path)
+			fmt.Printf("la carpeta no existe, creandola: %s\n", path)
 			err = createDirectory(path, false, sb, partitionPath, mountedPartition, uid, gid)
 			if err != nil {
 				return fmt.Errorf("error al crear la carpeta: %w", err)
@@ -147,9 +148,10 @@ func createDirectory(dirPath string, p bool, sb *structures.SuperBlock, partitio
 			}
 		}
 	}
+	// calcular el journal start
 
 	// Crear el directorio segun el path proporcionado
-	err := sb.CreateFolder(partitionPath, parentDirs, destDir, uid, gid)
+	err := sb.CreateFolder(partitionPath, parentDirs, destDir, uid, gid, dirPath, int64(mountedPartition.Part_start+int32(binary.Size(structures.SuperBlock{}))))
 	if err != nil {
 		return fmt.Errorf("error al crear el directorio: %w", err)
 	}

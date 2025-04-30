@@ -24,6 +24,10 @@ type Information struct {
 // SerializeJournal escribe la estructura Journal en un archivo binario
 func (journal *Journal) Serialize(path string, journauling_start int64) error {
 	// Calcular la posición en el archivo
+	if journauling_start == -1 {
+		fmt.Println("Not serializing journal, no journaling start")
+		return nil
+	}
 	offset := journauling_start + (int64(binary.Size(Journal{})) * int64(journal.J_count))
 
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0644)
@@ -75,10 +79,10 @@ func (journal *Journal) Print() {
 	date := time.Unix(int64(journal.J_content.I_date), 0)
 
 	fmt.Println("Journal:")
-	fmt.Printf("J_count: %d", journal.J_count)
+	fmt.Printf("J_count: %d\n", journal.J_count)
 	fmt.Println("Information:")
-	fmt.Printf("I_operation: %s", string(journal.J_content.I_operation[:]))
-	fmt.Printf("I_path: %s", string(journal.J_content.I_path[:]))
-	fmt.Printf("I_content: %s", string(journal.J_content.I_content[:]))
-	fmt.Printf("I_date: %s", date.Format(time.RFC3339))
+	fmt.Printf("I_operation: %s\n", string(journal.J_content.I_operation[:]))
+	fmt.Printf("I_path: %s\n", string(journal.J_content.I_path[:]))
+	fmt.Printf("I_content: %s\n", string(journal.J_content.I_content[:]))
+	fmt.Printf("I_date: %s\n", date.Format(time.RFC3339))
 }

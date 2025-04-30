@@ -161,6 +161,10 @@ func (sb *SuperBlock) CreateUsersFileExt3(path string, journauling_start int64) 
 	}
 	// Copiamos el texto de usuarios en el journal
 	copy(journalFile.J_content.I_content[:], usersText)
+	fmt.Println("Journal:")
+	journalFile.Print()
+
+	fmt.Println("serializando en:", journauling_start)
 
 	// Serializar el journal
 	err = journalFile.Serialize(path, journauling_start)

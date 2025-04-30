@@ -7,10 +7,27 @@ import FileUpload from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { toast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+type JournalEntry = {
+  operation: string;
+  path: string;
+  content: string;
+  date: string;
+}
 
 export default function FileSystemSimulator() {
   const [inputContent, setInputContent] = useState<string[]>([""]);
   const [outputContent, setOutputContent] = useState<string[]>([]);
+  const [journalJson, setJournalJson] = useState<JournalEntry[]>([]);
 
   // Función para manejar cambios en el contenido
   const handleContentChange = (index: number, newValue: string) => {
@@ -34,6 +51,15 @@ export default function FileSystemSimulator() {
         });
 
         const output = response.data.output;
+
+        // verificar si se ejecuto el comando journaling
+        if (command.includes("journaling")) {
+          console.log("se ejecuto el comando journaling");
+          // convertir el output en json
+          const jsonData = JSON.parse(output);
+          console.log(jsonData);
+          setJournalJson(jsonData);
+        }
 
         // mostrar cada linea de salida
         for (const line of output.split("\n")) {
@@ -124,6 +150,38 @@ export default function FileSystemSimulator() {
           <Button variant="outline" className="ml-4">Login</Button>
         </Link>
         <Button variant="outline" className="ml-4 bg-red-500 text-white hover:bg-red-600" onClick={handleLogout}>Logout</Button>
+        <Dialog>
+        <DialogTrigger className="bg-blue-500 text-white hover:bg-blue-600 ml-4 rounded-lg px-2 py-1 text-sm border">Journal</DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Journal</DialogTitle>
+            <DialogDescription>
+            </DialogDescription>
+          </DialogHeader>
+          <Table className="w-full overflow-auto">
+            <TableCaption>Journal</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">Operation</TableHead>
+                <TableHead className="w-[100px]">Path</TableHead>
+                <TableHead className="w-[100px]">Content</TableHead>
+                <TableHead className="w-[100px]">Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {journalJson?.map((entry:JournalEntry, index:number) => (
+                <TableRow key={index}>
+                  <TableCell>{entry.operation}</TableCell>
+                  <TableCell>{entry.path}</TableCell>
+                  <TableCell>{entry.content}</TableCell>
+                  <TableCell>{entry.date}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DialogContent>
+      </Dialog>
+
       </div>
 
       <div className="flex justify-center space-x-4">

@@ -4,6 +4,7 @@ import (
 	stores "backend/stores"
 	structures "backend/structures"
 	utils "backend/utils"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"regexp"
@@ -11,10 +12,10 @@ import (
 )
 
 type MKFILE struct {
-	path 	string // Ruta del archivo a crear 
-	r   	bool   // indica si se deben crear las carpetas intermedias si no existen
-	size 	int    // Tamaño del archivo a crear
-	cont 	string // ruta de un archivo a copiar su contenido en el nuevo archivo
+	path string // Ruta del archivo a crear
+	r    bool   // indica si se deben crear las carpetas intermedias si no existen
+	size int    // Tamaño del archivo a crear
+	cont string // ruta de un archivo a copiar su contenido en el nuevo archivo
 }
 
 /*
@@ -88,8 +89,6 @@ func ParseMKfile(tokens []string) (string, error) {
 	fmt.Println("Contenido:", cmd.cont)
 	fmt.Println("")
 
-	
-
 	err := commandMkfile(cmd)
 	if err != nil {
 		return "", err
@@ -127,7 +126,7 @@ func createFile(dirPath string, r bool, size int, contentPath string, sb *struct
 	parentDirs, destDir := utils.GetParentDirectories(dirPath)
 	fmt.Println("\nDirectorios padres:", parentDirs)
 	fmt.Println("Directorio destino:", destDir)
-	
+
 	if r {
 		fmt.Println("Opción -r activada")
 		pathSplited := utils.SplitPath(dirPath)
@@ -160,7 +159,7 @@ func createFile(dirPath string, r bool, size int, contentPath string, sb *struct
 			}
 
 			fmt.Println("Carpeta creada correctamente")
-		} 
+		}
 	} else {
 		// verificar que los directorios padres existan
 		pathSplited := utils.SplitPath(dirPath)
@@ -197,7 +196,7 @@ func createFile(dirPath string, r bool, size int, contentPath string, sb *struct
 
 	fmt.Println("CONTENTFILE", contentFile)
 	// Crear el directorio segun el path proporcionado
-	err = sb.CreateFile(partitionPath, parentDirs, destDir, r, size, contentFile, uid, gid)
+	err = sb.CreateFile(partitionPath, parentDirs, destDir, r, size, contentFile, uid, gid, dirPath, int64(mountedPartition.Part_start+int32(binary.Size(structures.SuperBlock{}))))
 	if err != nil {
 		return fmt.Errorf("error al crear el directorio: %w", err)
 	}
