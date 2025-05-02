@@ -5,9 +5,10 @@ import (
 	"log"
 	"strings"
 
+	analyzer "backend/analyzer" // Importar el paquete analyzer
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors" // Importar el middleware de CORS
-	analyzer "backend/analyzer" // Importar el paquete analyzer
 )
 
 type CommandRequest struct {
@@ -24,9 +25,10 @@ func main() {
 
 	// Configurar el middleware de CORS
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:3000", // Permitir solicitudes desde el frontend
+		// permitir todas las solicitudes de origen
+		AllowOrigins: "*",                            // Cambia esto a tu dominio en producción
 		AllowHeaders: "Origin, Content-Type, Accept", // Headers permitidos
-		AllowMethods: "GET, POST, PUT, DELETE", // Métodos HTTP permitidos
+		AllowMethods: "GET, POST, PUT, DELETE",       // Métodos HTTP permitidos
 	}))
 
 	// Ruta de prueba

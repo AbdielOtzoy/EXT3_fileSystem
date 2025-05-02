@@ -108,7 +108,7 @@ export default function FileSystemSimulator() {
     <div className="min-h-screen p-8"
       style={{ fontFamily: "'Fira Code', monospace", backgroundColor: "#202020" }}
     >
-      <h1 className="text-4xl font-bold mb-8 text-center text-white">File System EXT2</h1>
+      <h1 className="text-4xl font-bold mb-8 text-center text-white">File System EXT2 and EXT3</h1>
 
       <Terminal
         content={inputContent}
